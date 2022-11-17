@@ -30,7 +30,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
 add_subdirectory(deps/glad)
 
-add_executable(game deps/stb_image.h src/main.cpp)
+add_executable(game deps/stb_image.h src/main.cpp src/vkUtil.cpp src/vkUtil.hpp)
 
 target_link_libraries(
         game

@@ -9,6 +9,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../deps/stb_image.h"
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -198,6 +201,8 @@ private:
 
     bool framebufferResized = false;
 
+    VmaAllocator allocator;
+
     void initWindow() {
         glfwInit();
 
@@ -219,6 +224,7 @@ private:
         createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
+        createAllocator();
         createSwapChain();
         createImageViews();
         createRenderPass();
@@ -237,6 +243,21 @@ private:
         createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
+    }
+
+    void createAllocator() {
+        VmaVulkanFunctions vkFuncs = {};
+        vkFuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+        vkFuncs.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+        VmaAllocatorCreateInfo aci = {};
+        aci.vulkanApiVersion = VK_API_VERSION_1_2;
+        aci.physicalDevice = physicalDevice;
+        aci.device = device;
+        aci.instance = instance;
+        aci.pVulkanFunctions = &vkFuncs;
+        
+        vmaCreateAllocator(&aci, &allocator);
     }
 
     void mainLoop() {
