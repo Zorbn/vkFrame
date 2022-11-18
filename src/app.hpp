@@ -51,7 +51,7 @@ struct UniformBufferObject {
 
 struct CustomInstanceData {
 public:
-    alignas(16) glm::vec3 pos;
+    glm::vec3 pos;
 
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -114,8 +114,6 @@ private:
     VkImageView textureImageView;
     VkSampler textureSampler;
 
-    Model<CustomInstanceData> testModel;
-    Model<CustomInstanceData> testModel2;
     Model<CustomInstanceData> updateTestModel;
 
     std::vector<Buffer> uniformBuffers;

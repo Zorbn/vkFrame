@@ -102,8 +102,6 @@ void App::initVulkan() {
     createTextureImage();
     createTextureImageView();
     createTextureSampler();
-    testModel = Model<CustomInstanceData>::fromVerticesAndIndices(testVertices, testIndices, 2, allocator, commands, graphicsQueue, device);
-    testModel2 = Model<CustomInstanceData>::fromVerticesAndIndices(testVertices2, testIndices2, 2, allocator, commands, graphicsQueue, device);
     updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
     createUniformBuffers();
     createDescriptorPool();
@@ -132,12 +130,14 @@ void App::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        // int modelFrame = frameCount / 100;
-        // if (modelFrame % 2 == 0) {
-        //     updateTestModel.update(testVertices, testIndices, commands, allocator, graphicsQueue, device);
-        // } else {
-        //     updateTestModel.update(testVertices2, testIndices2, commands, allocator, graphicsQueue, device);
-        // }
+        uint32_t animFrame = frameCount / 3000;
+        if (frameCount % 3000 == 0) {
+            if (animFrame % 2 == 0) {
+                updateTestModel.update(testVertices2, testIndices2, commands, allocator, graphicsQueue, device);
+            } else {
+                updateTestModel.update(testVertices, testIndices, commands, allocator, graphicsQueue, device);
+            }
+        }
 
         drawFrame();
         frameCount++;
@@ -182,8 +182,6 @@ void App::cleanup() {
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
-    testModel.destroy(allocator);
-    testModel2.destroy(allocator);
     updateTestModel.destroy(allocator);
 
     vmaDestroyAllocator(allocator);
@@ -1061,8 +1059,6 @@ void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        // testModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
-        // testModel2.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
         std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
         updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
         updateTestModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);

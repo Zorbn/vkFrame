@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cinttypes>
-#include <optional>
 
 #include "buffer.hpp"
 #include "vertex.hpp"
@@ -11,17 +10,13 @@ class Model {
 public:
     Buffer vertexBuffer;
     Buffer indexBuffer;
-    std::optional<Buffer> vertexStagingBuffer = std::nullopt;
-    std::optional<Buffer> indexStagingBuffer = std::nullopt;
     Buffer instanceBuffer;
     Buffer instanceStagingBuffer;
-    bool modifiable;
     size_t size;
     size_t instanceCount = 0;
 
     static Model<T> fromVerticesAndIndices(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
         Model model;
-        model.modifiable = false;
         model.size = indices.size();
 
         model.indexBuffer = Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
@@ -36,16 +31,10 @@ public:
 
     static Model<T> fromVerticesAndIndicesModifiable(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxVertices, const size_t maxIndices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
         Model model;
-        model.modifiable = true;
         model.size = indices.size();
 
-        std::pair<Buffer, Buffer> indexBuffers = Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, maxIndices);
-        model.indexStagingBuffer = indexBuffers.first;
-        model.indexBuffer = indexBuffers.second;
-
-        std::pair<Buffer, Buffer> vertexBuffers = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, maxVertices);
-        model.vertexStagingBuffer = vertexBuffers.first;
-        model.vertexBuffer = vertexBuffers.second;
+        model.indexBuffer = Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, maxIndices);
+        model.vertexBuffer = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, maxVertices);
 
         size_t instanceByteSize = maxInstances * sizeof(CustomInstanceData);
         model.instanceStagingBuffer = Buffer::create(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
@@ -66,19 +55,12 @@ public:
     }
 
     void update(const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
-        if (!modifiable) return;
-
         size = indices.size();
 
-        if (vertexStagingBuffer) {
-            vertexStagingBuffer.value().setData(vertices.data());
-            vertexStagingBuffer.value().copyTo(allocator, graphicsQueue, device, commands, vertexBuffer);
-        }
-
-        if (indexStagingBuffer) {
-            indexStagingBuffer.value().setData(indices.data());
-            indexStagingBuffer.value().copyTo(allocator, graphicsQueue, device, commands, indexBuffer);
-        }
+        indexBuffer.destroy(allocator);
+        vertexBuffer.destroy(allocator);
+        indexBuffer = Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
+        vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
     }
 
     void updateInstances(const std::vector<T>& instances, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
@@ -90,13 +72,5 @@ public:
     void destroy(VmaAllocator allocator) {
         vertexBuffer.destroy(allocator);
         indexBuffer.destroy(allocator);
-
-        if (vertexStagingBuffer) {
-            vertexStagingBuffer.value().destroy(allocator);
-        }
-
-        if (indexStagingBuffer) {
-            indexStagingBuffer.value().destroy(allocator);
-        }
     }
 };
