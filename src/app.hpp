@@ -27,32 +27,18 @@
 #include <set>
 
 #include "buffer.hpp"
+#include "vertex.hpp"
+#include "commands.hpp"
+#include "queueFamilyIndices.hpp"
+#include "model.hpp"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
-
-struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-
-    bool isComplete() {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-};
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
-};
-
-struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 texCoord;
-
-    static VkVertexInputBindingDescription getBindingDescription();
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
 struct UniformBufferObject {
@@ -65,13 +51,7 @@ class App {
 public:
     void run();
 
-    VkCommandPool commandPool;
     VmaAllocator allocator;
-
-    void copyBufferTo(VmaAllocator& allocator, Buffer& src, Buffer& dst);
-    void copyBufferToImage(Buffer& src, VkImage image, uint32_t width, uint32_t height);
-    VkCommandBuffer beginSingleTimeCommands();
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 private:
     GLFWwindow* window;
@@ -107,10 +87,8 @@ private:
     VkImageView textureImageView;
     VkSampler textureSampler;
 
-    Buffer testVertexBuffer;
-    Buffer testIndexBuffer;
-    Buffer testVertexBuffer2;
-    Buffer testIndexBuffer2;
+    Model testModel;
+    Model testModel2;
 
     std::vector<Buffer> uniformBuffers;
     std::vector<void*> uniformBuffersMapped;
@@ -118,12 +96,12 @@ private:
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
 
-    std::vector<VkCommandBuffer> commandBuffers;
-
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+
+    Commands commands;
 
     bool framebufferResized = false;
 
@@ -141,7 +119,6 @@ private:
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
     void createFramebuffers();
-    void createCommandPool();
     void createDepthResources();
 
     void mainLoop();
@@ -180,13 +157,11 @@ private:
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
-    void createCommandBuffers();
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-
     void createSyncObjects();
     void updateUniformBuffer(uint32_t currentImage);
 
     void drawFrame();
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
 

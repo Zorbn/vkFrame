@@ -26,6 +26,23 @@
         "xmemory": "cpp",
         "xstring": "cpp",
         "xtree": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "bit": "cpp",
+        "charconv": "cpp",
+        "functional": "cpp",
+        "initializer_list": "cpp",
+        "iomanip": "cpp",
+        "limits": "cpp",
+        "list": "cpp",
+        "locale": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "span": "cpp",
+        "string": "cpp",
+        "system_error": "cpp",
+        "typeinfo": "cpp",
+        "utility": "cpp",
+        "xhash": "cpp",
+        "xlocmon": "cpp"
     }
 }

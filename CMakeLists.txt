@@ -39,6 +39,10 @@ add_executable(
         src/vkUtil.cpp src/vkUtil.hpp
         src/app.cpp src/app.hpp
         src/buffer.cpp src/buffer.hpp
+        src/model.cpp src/model.hpp
+        src/commands.cpp src/commands.hpp
+        src/vertex.hpp
+        src/queueFamilyIndices.hpp
 )
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
