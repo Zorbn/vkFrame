@@ -1,4 +1,6 @@
 include(FetchContent)
+include(CheckCCompilerFlag)
+
 cmake_minimum_required(VERSION 3.17)
 
 project(gFps)
@@ -31,6 +33,12 @@ FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
 add_subdirectory(deps/glad)
 
 add_executable(game deps/stb_image.h src/main.cpp src/vkUtil.cpp src/vkUtil.hpp)
+
+check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
+
+if (HAVE_NULL_COMPLETENESS)
+        target_compile_options(game PRIVATE -Wno-nullability-completeness)
+endif (HAVE_NULL_COMPLETENESS)
 
 target_link_libraries(
         game
