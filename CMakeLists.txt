@@ -32,7 +32,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
 add_subdirectory(deps/glad)
 
-add_executable(game deps/stb_image.h src/main.cpp src/vkUtil.cpp src/vkUtil.hpp)
+add_executable(
+        game
+        deps/stb_image.h
+        src/main.cpp
+        src/vkUtil.cpp src/vkUtil.hpp
+        src/app.cpp src/app.hpp
+        src/buffer.cpp src/buffer.hpp
+)
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
 
@@ -56,4 +63,5 @@ add_custom_command(
         COMMAND
         ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR})
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+)
