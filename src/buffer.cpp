@@ -1,6 +1,6 @@
 #include "buffer.hpp"
 
-Buffer Buffer::create(VmaAllocator allocator, size_t size, VkDeviceSize byteSize, VkBufferUsageFlags usage, bool cpuAccessable) {
+Buffer Buffer::create(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags usage, bool cpuAccessable) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = byteSize;
@@ -15,7 +15,6 @@ Buffer Buffer::create(VmaAllocator allocator, size_t size, VkDeviceSize byteSize
 
     Buffer buffer;
     buffer.byteSize = byteSize;
-    buffer.size = size;
 
     if (vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.allocation, &buffer.allocInfo) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create buffer!");
@@ -58,31 +57,41 @@ void Buffer::copyToImage(Commands& commands, VkQueue graphicsQueue, VkDevice dev
 }
 
 Buffer Buffer::fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices) {
-    VkDeviceSize bufferByteSize = sizeof(vertices[0]) * vertices.size();
-
-    Buffer stagingBuffer = create(allocator, vertices.size(), bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
-    stagingBuffer.setData(vertices.data());
-
-    Buffer vertexBuffer = create(allocator, vertices.size(), bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
-
-    stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, vertexBuffer);
-    stagingBuffer.destroy(allocator);
-
-    return vertexBuffer;
+    std::pair<Buffer, Buffer> buffers = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, vertices.size());
+    buffers.first.destroy(allocator);
+    return buffers.second;
 }
 
 Buffer Buffer::fromIndices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<uint16_t>& indices) {
-    VkDeviceSize bufferByteSize = sizeof(indices[0]) * indices.size();
+    std::pair<Buffer, Buffer> buffers = Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, indices.size());
+    buffers.first.destroy(allocator);
+    return buffers.second;
+}
 
-    Buffer stagingBuffer = create(allocator, indices.size(), bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+std::pair<Buffer, Buffer> Buffer::fromIndicesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<uint16_t>& indices, const size_t maxIndices) {
+    VkDeviceSize bufferByteSize = sizeof(indices[0]) * maxIndices;
+
+    Buffer stagingBuffer = create(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
     stagingBuffer.setData(indices.data());
 
-    Buffer indexBuffer = create(allocator, indices.size(), bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, false);
+    Buffer indexBuffer = create(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, false);
 
     stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, indexBuffer);
-    stagingBuffer.destroy(allocator);
 
-    return indexBuffer;
+    return std::make_pair(stagingBuffer, indexBuffer);
+}
+
+std::pair<Buffer, Buffer> Buffer::fromVerticesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices, const size_t maxVertices) {
+    VkDeviceSize bufferByteSize = sizeof(vertices[0]) * maxVertices;
+
+    Buffer stagingBuffer = create(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+    stagingBuffer.setData(vertices.data());
+
+    Buffer vertexBuffer = create(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
+
+    stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, vertexBuffer);
+
+    return std::make_pair(stagingBuffer, vertexBuffer);
 }
 
 void Buffer::destroy(VmaAllocator& allocator) {

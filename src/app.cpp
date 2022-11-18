@@ -35,36 +35,6 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-VkVertexInputBindingDescription Vertex::getBindingDescription() {
-    VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    return bindingDescription;
-}
-
-std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-    return attributeDescriptions;
-}
-
 const std::vector<Vertex> testVertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -132,8 +102,9 @@ void App::initVulkan() {
     createTextureImage();
     createTextureImageView();
     createTextureSampler();
-    testModel = Model::fromVerticesAndIndices(testVertices, testIndices, allocator, commands, graphicsQueue, device);
-    testModel2 = Model::fromVerticesAndIndices(testVertices2, testIndices2, allocator, commands, graphicsQueue, device);
+    testModel = Model::fromVerticesAndIndices(testVertices, testIndices, 2, allocator, commands, graphicsQueue, device);
+    testModel2 = Model::fromVerticesAndIndices(testVertices2, testIndices2, 2, allocator, commands, graphicsQueue, device);
+    updateTestModel = Model::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -160,7 +131,16 @@ void App::createAllocator() {
 void App::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        // int modelFrame = frameCount / 100;
+        // if (modelFrame % 2 == 0) {
+        //     updateTestModel.update(testVertices, testIndices, commands, allocator, graphicsQueue, device);
+        // } else {
+        //     updateTestModel.update(testVertices2, testIndices2, commands, allocator, graphicsQueue, device);
+        // }
+
         drawFrame();
+        frameCount++;
     }
 
     vkDeviceWaitIdle(device);
@@ -204,6 +184,7 @@ void App::cleanup() {
 
     testModel.destroy(allocator);
     testModel2.destroy(allocator);
+    updateTestModel.destroy(allocator);
 
     vmaDestroyAllocator(allocator);
 
@@ -546,12 +527,16 @@ void App::createGraphicsPipeline() {
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { Vertex::getBindingDescription(), InstanceData::getBindingDescription() };
+    auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+    auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
+    std::array<VkVertexInputAttributeDescription, vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size()> attributeDescriptions;
+    auto current = std::copy(instanceAttributeDescriptions.begin(), instanceAttributeDescriptions.end(), attributeDescriptions.begin());
+    std::copy(vertexAttributeDescriptions.begin(), vertexAttributeDescriptions.end(), current);
 
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexBindingDescriptionCount = 2;
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -713,7 +698,7 @@ void App::createTextureImage() {
         throw std::runtime_error("Failed to load texture image!");
     }
 
-    Buffer stagingBuffer = Buffer::create(allocator, imageSize, imageByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+    Buffer stagingBuffer = Buffer::create(allocator, imageByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
     stagingBuffer.setData(pixels);
 
     stbi_image_free(pixels);
@@ -848,13 +833,12 @@ void App::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout ol
 
 void App::createUniformBuffers() {
     VkDeviceSize bufferByteSize = sizeof(UniformBufferObject);
-    size_t bufferSize = bufferByteSize / 4; // Made up of matrices of floats, so 4 bytes per element.
 
     uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        uniformBuffers[i] = Buffer::create(allocator, bufferSize, bufferByteSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true);
+        uniformBuffers[i] = Buffer::create(allocator, bufferByteSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true);
 
         vmaMapMemory(allocator, uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
     }
@@ -1077,8 +1061,11 @@ void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex
         scissor.extent = swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        testModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
-        testModel2.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
+        // testModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
+        // testModel2.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
+        std::vector<InstanceData> instances = {InstanceData{-0.5f}, InstanceData{0.5f}, InstanceData{1.0f}};
+        updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
+        updateTestModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
 
     vkCmdEndRenderPass(commandBuffer);
 

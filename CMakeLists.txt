@@ -41,7 +41,8 @@ add_executable(
         src/buffer.cpp src/buffer.hpp
         src/model.cpp src/model.hpp
         src/commands.cpp src/commands.hpp
-        src/vertex.hpp
+        src/vertex.cpp src/vertex.hpp
+        src/instanceData.hpp src/instanceData.cpp
         src/queueFamilyIndices.hpp
 )
 

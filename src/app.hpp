@@ -25,12 +25,14 @@
 #include <array>
 #include <optional>
 #include <set>
+#include <algorithm>
 
 #include "buffer.hpp"
 #include "vertex.hpp"
 #include "commands.hpp"
 #include "queueFamilyIndices.hpp"
 #include "model.hpp"
+#include "instanceData.hpp"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
@@ -89,6 +91,7 @@ private:
 
     Model testModel;
     Model testModel2;
+    Model updateTestModel;
 
     std::vector<Buffer> uniformBuffers;
     std::vector<void*> uniformBuffersMapped;
@@ -100,6 +103,7 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+    uint32_t frameCount = 0;
 
     Commands commands;
 
@@ -148,12 +152,9 @@ private:
 
     void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
-    Buffer createVertexBuffer(const std::vector<Vertex>& vertices);
-    Buffer createIndexBuffer(const std::vector<uint16_t>& indices);
     void createUniformBuffers();
     void createDescriptorPool();
     void createDescriptorSets();
-    Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, bool cpuAccessable);
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
