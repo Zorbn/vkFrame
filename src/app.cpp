@@ -102,9 +102,9 @@ void App::initVulkan() {
     createTextureImage();
     createTextureImageView();
     createTextureSampler();
-    testModel = Model::fromVerticesAndIndices(testVertices, testIndices, 2, allocator, commands, graphicsQueue, device);
-    testModel2 = Model::fromVerticesAndIndices(testVertices2, testIndices2, 2, allocator, commands, graphicsQueue, device);
-    updateTestModel = Model::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
+    testModel = Model<CustomInstanceData>::fromVerticesAndIndices(testVertices, testIndices, 2, allocator, commands, graphicsQueue, device);
+    testModel2 = Model<CustomInstanceData>::fromVerticesAndIndices(testVertices2, testIndices2, 2, allocator, commands, graphicsQueue, device);
+    updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -527,9 +527,9 @@ void App::createGraphicsPipeline() {
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { Vertex::getBindingDescription(), InstanceData::getBindingDescription() };
+    std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { Vertex::getBindingDescription(), CustomInstanceData::getBindingDescription() };
     auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
-    auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
+    auto instanceAttributeDescriptions = CustomInstanceData::getAttributeDescriptions();
     std::array<VkVertexInputAttributeDescription, vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size()> attributeDescriptions;
     auto current = std::copy(instanceAttributeDescriptions.begin(), instanceAttributeDescriptions.end(), attributeDescriptions.begin());
     std::copy(vertexAttributeDescriptions.begin(), vertexAttributeDescriptions.end(), current);
@@ -1063,7 +1063,7 @@ void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex
 
         // testModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
         // testModel2.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
-        std::vector<InstanceData> instances = {InstanceData{-0.5f}, InstanceData{0.5f}, InstanceData{1.0f}};
+        std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
         updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
         updateTestModel.draw(commandBuffer, pipelineLayout, descriptorSets[currentFrame]);
 

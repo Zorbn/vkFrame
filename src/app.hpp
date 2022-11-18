@@ -49,6 +49,31 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 proj;
 };
 
+struct CustomInstanceData {
+public:
+    alignas(16) glm::vec3 pos;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 1;
+        bindingDescription.stride = sizeof(CustomInstanceData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 1;
+        attributeDescriptions[0].location = 3;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = 0;
+
+        return attributeDescriptions;
+    }
+};
+
 class App {
 public:
     void run();
@@ -89,9 +114,9 @@ private:
     VkImageView textureImageView;
     VkSampler textureSampler;
 
-    Model testModel;
-    Model testModel2;
-    Model updateTestModel;
+    Model<CustomInstanceData> testModel;
+    Model<CustomInstanceData> testModel2;
+    Model<CustomInstanceData> updateTestModel;
 
     std::vector<Buffer> uniformBuffers;
     std::vector<void*> uniformBuffersMapped;

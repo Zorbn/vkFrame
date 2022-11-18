@@ -39,7 +39,7 @@ add_executable(
         src/vkUtil.cpp src/vkUtil.hpp
         src/app.cpp src/app.hpp
         src/buffer.cpp src/buffer.hpp
-        src/model.cpp src/model.hpp
+        src/model.hpp
         src/commands.cpp src/commands.hpp
         src/vertex.cpp src/vertex.hpp
         src/instanceData.hpp src/instanceData.cpp
