@@ -73,9 +73,6 @@ private:
     std::vector<Buffer> uniformBuffers;
     std::vector<void*> uniformBuffersMapped;
 
-    VkDescriptorPool descriptorPool;
-    std::vector<VkDescriptorSet> descriptorSets;
-
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
@@ -113,8 +110,6 @@ private:
     bool hasStencilComponent(VkFormat format);
 
     void createUniformBuffers();
-    void createDescriptorPool();
-    void createDescriptorSets();
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
