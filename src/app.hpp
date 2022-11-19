@@ -13,7 +13,6 @@
 #include <vk_mem_alloc.h>
 
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
 #include <algorithm>
 #include <chrono>
@@ -33,7 +32,9 @@
 #include "queueFamilyIndices.hpp"
 #include "model.hpp"
 #include "instanceData.hpp"
+#include "customInstanceData.hpp"
 #include "swapchain.hpp"
+#include "pipeline.hpp"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
@@ -42,31 +43,6 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
-};
-
-struct CustomInstanceData {
-public:
-    glm::vec3 pos;
-
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 1;
-        bindingDescription.stride = sizeof(CustomInstanceData);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-
-        return bindingDescription;
-    }
-
-    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 1;
-        attributeDescriptions[0].location = 3;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = 0;
-
-        return attributeDescriptions;
-    }
 };
 
 class App {
@@ -87,11 +63,6 @@ private:
 
     VkQueue graphicsQueue;
     VkQueue presentQueue;
-
-    VkRenderPass renderPass;
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkPipelineLayout pipelineLayout;
-    VkPipeline graphicsPipeline;
 
     Image textureImage;
     VkImageView textureImageView;
@@ -114,6 +85,7 @@ private:
 
     Commands commands;
     Swapchain swapchain;
+    Pipeline pipeline;
 
     bool framebufferResized = false;
 
@@ -125,9 +97,6 @@ private:
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
-    void createRenderPass();
-    void createDescriptorSetLayout();
-    void createGraphicsPipeline();
 
     void mainLoop();
     void waitWhileMinimized();
@@ -155,14 +124,11 @@ private:
     void drawFrame();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-    VkShaderModule createShaderModule(const std::vector<char>& code);
-
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
     std::vector<const char*> getRequiredExtensions();
     bool checkValidationLayerSupport();
 
-    static std::vector<char> readFile(const std::string& filename);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 };

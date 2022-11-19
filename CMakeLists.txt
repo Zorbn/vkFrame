@@ -36,7 +36,6 @@ add_executable(
         game
         deps/stb_image.h
         src/main.cpp
-        src/vkUtil.cpp src/vkUtil.hpp
         src/app.cpp src/app.hpp
         src/buffer.cpp src/buffer.hpp
         src/commands.cpp src/commands.hpp
@@ -44,8 +43,10 @@ add_executable(
         src/instanceData.cpp src/instanceData.hpp
         src/swapchain.cpp src/swapchain.hpp
         src/image.cpp src/image.hpp
+        src/pipeline.cpp src/pipeline.hpp
         src/model.hpp
         src/queueFamilyIndices.hpp
+        src/customInstanceData.hpp
 )
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
