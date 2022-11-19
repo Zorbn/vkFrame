@@ -1,8 +1,8 @@
 #include "image.hpp"
 
-Image Image::createTextureImage(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
+Image Image::createTextureImage(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(image.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     size_t imageSize = texWidth * texHeight;
     VkDeviceSize imageByteSize = imageSize * 4;
 

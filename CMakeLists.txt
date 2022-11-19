@@ -70,6 +70,6 @@ add_custom_command(
         POST_BUILD
         COMMAND
         ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )

@@ -98,12 +98,12 @@ void App::initVulkan() {
     swapchain.create(device, physicalDevice, surface, width, height);
     swapchain.createImageViews(device);
 
-    pipeline.create("shader.vert.spv", "shader.frag.spv", true, swapchain, physicalDevice, device);
+    pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", true, swapchain, physicalDevice, device);
 
     commands.createCommandPool(physicalDevice, device, surface);
     swapchain.createDepthResources(allocator, physicalDevice, device);
     swapchain.createFramebuffers(device, pipeline.renderPass);
-    textureImage = Image::createTextureImage(allocator, commands, graphicsQueue, device);
+    textureImage = Image::createTextureImage("res/testImg.png", allocator, commands, graphicsQueue, device);
     textureImageView = textureImage.createTextureView(device);
     textureSampler = textureImage.createTextureSampler(physicalDevice, device);
 

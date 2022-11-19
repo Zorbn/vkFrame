@@ -13,7 +13,7 @@ public:
     VmaAllocation allocation;
 
     static Image createImage(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties);
-    static Image createTextureImage(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device);
+    static Image createTextureImage(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device);
     static VkSampler createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device);
 
     VkImageView createTextureView( VkDevice device);
