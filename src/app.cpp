@@ -84,6 +84,8 @@ void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
     app->framebufferResized = true;
 }
 
+// TODO: See if all of these create methods can be replaced with constructors.
+// TODO: Remove unnecessary public variables in all the new classes/structs.
 void App::initVulkan() {
     createInstance();
     setupDebugMessenger();
@@ -106,7 +108,8 @@ void App::initVulkan() {
     textureSampler = textureImage.createTextureSampler(physicalDevice, device);
 
     updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
-    createUniformBuffers();
+    ubo.create(MAX_FRAMES_IN_FLIGHT, allocator);
+
     pipeline.createDescriptorSetLayout(device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0;
@@ -128,9 +131,9 @@ void App::initVulkan() {
     pipeline.createDescriptorPool(MAX_FRAMES_IN_FLIGHT, device);
     pipeline.createDescriptorSets(MAX_FRAMES_IN_FLIGHT, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, std::vector<VkDescriptorSet>& descriptorSets, size_t i) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = uniformBuffers[i].buffer;
+        bufferInfo.buffer = ubo.getBuffer(i);
         bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
+        bufferInfo.range = ubo.getDataSize();
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -215,10 +218,7 @@ void App::cleanup() {
     swapchain.cleanup(allocator, device);
     pipeline.cleanup(device);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vmaUnmapMemory(allocator, uniformBuffers[i].allocation);
-        uniformBuffers[i].destroy(allocator);
-    }
+    ubo.destroy(allocator);
 
     vkDestroyDescriptorPool(device, pipeline.descriptorPool, nullptr);
 
@@ -390,19 +390,6 @@ bool App::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void App::createUniformBuffers() {
-    VkDeviceSize bufferByteSize = sizeof(UniformBufferObject);
-
-    uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        uniformBuffers[i] = Buffer::create(allocator, bufferByteSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true);
-
-        vmaMapMemory(allocator, uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
-    }
-}
-
 uint32_t App::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -437,21 +424,6 @@ void App::createSyncObjects() {
     }
 }
 
-void App::updateUniformBuffer(uint32_t currentImage) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapchain.extent.width / (float) swapchain.extent.height, 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
-
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-}
-
 void App::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -469,7 +441,18 @@ void App::drawFrame() {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
-    updateUniformBuffer(currentFrame);
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformBufferData uboData{};
+    uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    uboData.proj = glm::perspective(glm::radians(45.0f), swapchain.extent.width / (float) swapchain.extent.height, 0.1f, 10.0f);
+    uboData.proj[1][1] *= -1;
+
+    ubo.update(uboData);
 
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 

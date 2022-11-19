@@ -35,11 +35,12 @@
 #include "customInstanceData.hpp"
 #include "swapchain.hpp"
 #include "pipeline.hpp"
+#include "uniformBuffer.hpp"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
-struct UniformBufferObject {
+struct UniformBufferData {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
@@ -70,9 +71,6 @@ private:
 
     Model<CustomInstanceData> updateTestModel;
 
-    std::vector<Buffer> uniformBuffers;
-    std::vector<void*> uniformBuffersMapped;
-
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
@@ -83,6 +81,7 @@ private:
     Commands commands;
     Swapchain swapchain;
     Pipeline pipeline;
+    UniformBuffer<UniformBufferData> ubo;
 
     bool framebufferResized = false;
 
@@ -114,7 +113,6 @@ private:
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     void createSyncObjects();
-    void updateUniformBuffer(uint32_t currentImage);
 
     void drawFrame();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
