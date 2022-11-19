@@ -98,17 +98,33 @@ void App::initVulkan() {
     swapchain.create(device, physicalDevice, surface, width, height);
     swapchain.createImageViews(device);
 
-    pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", true, swapchain, physicalDevice, device);
-
     commands.createCommandPool(physicalDevice, device, surface);
-    swapchain.createDepthResources(allocator, physicalDevice, device);
-    swapchain.createFramebuffers(device, pipeline.renderPass);
+    commands.createCommandBuffers(device, MAX_FRAMES_IN_FLIGHT);
+
     textureImage = Image::createTextureImage("res/testImg.png", allocator, commands, graphicsQueue, device);
     textureImageView = textureImage.createTextureView(device);
     textureSampler = textureImage.createTextureSampler(physicalDevice, device);
 
     updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
     createUniformBuffers();
+    pipeline.createDescriptorSetLayout(device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.pImmutableSamplers = nullptr;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+        samplerLayoutBinding.binding = 1;
+        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerLayoutBinding.pImmutableSamplers = nullptr;
+        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        bindings.push_back(uboLayoutBinding);
+        bindings.push_back(samplerLayoutBinding);
+    });
     pipeline.createDescriptorPool(MAX_FRAMES_IN_FLIGHT, device);
     pipeline.createDescriptorSets(MAX_FRAMES_IN_FLIGHT, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, std::vector<VkDescriptorSet>& descriptorSets, size_t i) {
         VkDescriptorBufferInfo bufferInfo{};
@@ -141,7 +157,11 @@ void App::initVulkan() {
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     });
-    commands.createCommandBuffers(device, MAX_FRAMES_IN_FLIGHT);
+    pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", true, swapchain, physicalDevice, device);
+
+    swapchain.createDepthResources(allocator, physicalDevice, device);
+    swapchain.createFramebuffers(device, pipeline.renderPass);
+
     createSyncObjects();
 }
 
@@ -245,7 +265,7 @@ void App::createInstance() {
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "No Engine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_API_VERSION_1_2;
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

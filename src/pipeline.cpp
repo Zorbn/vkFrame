@@ -2,7 +2,6 @@
 
 void Pipeline::create(const std::string& vertShader, const std::string& fragShader, bool enableDepth, Swapchain& swapchain, VkPhysicalDevice& physicalDevice, VkDevice& device) {
     createRenderPass(swapchain, physicalDevice, device, enableDepth);
-    createDescriptorSetLayout(device);
     createPipeline(vertShader, fragShader, device);
 }
 
@@ -194,22 +193,10 @@ void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalD
     }
 }
 
-void Pipeline::createDescriptorSetLayout(VkDevice device) {
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    setupBindings(bindings);
 
-    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
