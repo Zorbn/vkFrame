@@ -17,12 +17,12 @@ public:
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
-    void create(const std::string& vertShader, const std::string& fragShader, Swapchain& swapchain, VkPhysicalDevice& physicalDevice, VkDevice& device);
+    void create(const std::string& vertShader, const std::string& fragShader, bool enableDepth, Swapchain& swapchain, VkPhysicalDevice& physicalDevice, VkDevice& device);
     void cleanup(VkDevice device);
 
 private:
     void createPipeline(const std::string& vertShader, const std::string& fragShader, VkDevice device);
-    void createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalDevice, VkDevice device);
+    void createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalDevice, VkDevice device, bool enableDepth);
     void createDescriptorSetLayout(VkDevice device);
     VkShaderModule createShaderModule(const std::vector<char>& code, VkDevice device);
 

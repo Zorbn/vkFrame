@@ -8,9 +8,9 @@ Project should be structured as:
      * Buffers,
      * Images,
      * Swapchains, (including depth resources, framebuffers, (swapchain) image views)
-
      * Pipelines
-     * Uniforms
+
+     * Uniforms with T generic data?
 
 - Out hl-layer
     - High level drawing that doesn't depend on API details (outside of shaders).

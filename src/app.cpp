@@ -98,7 +98,7 @@ void App::initVulkan() {
     swapchain.create(device, physicalDevice, surface, width, height);
     swapchain.createImageViews(device);
 
-    pipeline.create("shader.vert.spv", "shader.frag.spv", swapchain, physicalDevice, device);
+    pipeline.create("shader.vert.spv", "shader.frag.spv", true, swapchain, physicalDevice, device);
 
     commands.createCommandPool(physicalDevice, device, surface);
     swapchain.createDepthResources(allocator, physicalDevice, device);

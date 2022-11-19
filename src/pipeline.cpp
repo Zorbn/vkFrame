@@ -1,7 +1,7 @@
 #include "pipeline.hpp"
 
-void Pipeline::create(const std::string& vertShader, const std::string& fragShader, Swapchain& swapchain, VkPhysicalDevice& physicalDevice, VkDevice& device) {
-    createRenderPass(swapchain, physicalDevice, device);
+void Pipeline::create(const std::string& vertShader, const std::string& fragShader, bool enableDepth, Swapchain& swapchain, VkPhysicalDevice& physicalDevice, VkDevice& device) {
+    createRenderPass(swapchain, physicalDevice, device, enableDepth);
     createDescriptorSetLayout(device);
     createPipeline(vertShader, fragShader, device);
 }
@@ -133,7 +133,7 @@ void Pipeline::createPipeline(const std::string& vertShader, const std::string& 
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
 }
 
-void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalDevice, VkDevice device) {
+void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalDevice, VkDevice device, bool enableDepth) {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = swapchain.imageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -143,6 +143,10 @@ void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalD
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentDescription depthAttachment{};
     depthAttachment.format = swapchain.findDepthFormat(physicalDevice);
@@ -154,10 +158,6 @@ void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalD
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = 1;
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -166,7 +166,10 @@ void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalD
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    if (enableDepth) {
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
+    }
 
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
