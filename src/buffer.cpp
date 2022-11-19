@@ -33,29 +33,6 @@ void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice dev
     commands.endSingleTimeCommands(commandBuffer, graphicsQueue, device);
 }
 
-void Buffer::copyToImage(Commands& commands, VkQueue graphicsQueue, VkDevice device, VkImage image, uint32_t width, uint32_t height) {
-    VkCommandBuffer commandBuffer = commands.beginSingleTimeCommands(graphicsQueue, device);
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {
-        width,
-        height,
-        1
-    };
-
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-    commands.endSingleTimeCommands(commandBuffer, graphicsQueue, device);
-}
-
 Buffer Buffer::fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices) {
     return Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, vertices.size());
 }

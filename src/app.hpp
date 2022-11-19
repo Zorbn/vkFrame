@@ -33,15 +33,10 @@
 #include "queueFamilyIndices.hpp"
 #include "model.hpp"
 #include "instanceData.hpp"
+#include "swapchain.hpp"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
-
-struct SwapChainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
@@ -93,24 +88,12 @@ private:
     VkQueue graphicsQueue;
     VkQueue presentQueue;
 
-    VkSwapchainKHR swapChain;
-    std::vector<VkImage> swapChainImages;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
-    std::vector<VkImageView> swapChainImageViews;
-    std::vector<VkFramebuffer> swapChainFramebuffers;
-
     VkRenderPass renderPass;
     VkDescriptorSetLayout descriptorSetLayout;
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
-    VkImage depthImage;
-    VmaAllocation depthImageAllocation;
-    VkImageView depthImageView;
-
-    VkImage textureImage;
-    VmaAllocation textureImageAllocation;
+    Image textureImage;
     VkImageView textureImageView;
     VkSampler textureSampler;
 
@@ -126,9 +109,11 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
+
     uint32_t frameCount = 0;
 
     Commands commands;
+    Swapchain swapchain;
 
     bool framebufferResized = false;
 
@@ -140,20 +125,14 @@ private:
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
-    void createSwapChain();
-    void createImageViews();
     void createRenderPass();
     void createDescriptorSetLayout();
     void createGraphicsPipeline();
-    void createFramebuffers();
-    void createDepthResources();
 
     void mainLoop();
+    void waitWhileMinimized();
 
-    void cleanupSwapChain();
     void cleanup();
-
-    void recreateSwapChain();
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     void setupDebugMessenger();
@@ -162,18 +141,7 @@ private:
 
     void pickPhysicalDevice();
 
-    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkFormat findDepthFormat();
-
     bool hasStencilComponent(VkFormat format);
-
-    void createTextureImage();
-    void createTextureImageView();
-    void createTextureSampler();
-    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VmaAllocation& imageAllocation);
-
-    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     void createUniformBuffers();
     void createDescriptorPool();
@@ -188,11 +156,6 @@ private:
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
-
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);

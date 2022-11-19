@@ -57,6 +57,7 @@ public:
     void update(const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
         size = indices.size();
 
+        vkDeviceWaitIdle(device);
         indexBuffer.destroy(allocator);
         vertexBuffer.destroy(allocator);
         indexBuffer = Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
