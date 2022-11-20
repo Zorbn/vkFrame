@@ -15,20 +15,6 @@ public:
         model.vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
 
         size_t instanceByteSize = maxInstances * sizeof(T);
-        model.instanceStagingBuffer = Buffer::create(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
-        model.instanceBuffer = Buffer::create(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
-
-        return model;
-    }
-
-    static Model<T> fromVerticesAndIndicesModifiable(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxVertices, const size_t maxIndices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
-        Model model;
-        model.size = indices.size();
-
-        model.indexBuffer = Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, maxIndices);
-        model.vertexBuffer = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, maxVertices);
-
-        size_t instanceByteSize = maxInstances * sizeof(T);
         model.instanceStagingBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
         model.instanceBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
 

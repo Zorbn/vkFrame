@@ -4,11 +4,12 @@ include(CheckCCompilerFlag)
 cmake_minimum_required(VERSION 3.17)
 
 project(vk_cubes)
-set(TARGET_NAME vk_cubes)
+set(LIB_NAME vk_cubes)
 
 find_package(Vulkan REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
+
 FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -24,17 +25,11 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
         GIT_TAG v3.0.1
 )
-FetchContent_Declare(
-        vk_bootstrap
-        GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
-        GIT_TAG v0.11
-)
 
-FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
+FetchContent_MakeAvailable(glfw glm vk_mem_alloc)
 
-add_executable(
-        ${TARGET_NAME}
-        src/main.cpp
+add_library(
+        ${LIB_NAME}
         src/renderer/renderer.cpp src/renderer/renderer.hpp
         src/renderer/buffer.cpp src/renderer/buffer.hpp
         src/renderer/commands.cpp src/renderer/commands.hpp
@@ -52,25 +47,32 @@ add_executable(
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
 
 if (HAVE_NULL_COMPLETENESS)
-        target_compile_options(${TARGET_NAME} PRIVATE -Wno-nullability-completeness)
+        target_compile_options(${LIB_NAME} PRIVATE -Wno-nullability-completeness)
 endif (HAVE_NULL_COMPLETENESS)
 
-target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps)
+target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps)
 
 target_link_libraries(
-        ${TARGET_NAME}
+        ${LIB_NAME}
         glm
         glfw
-        vk-bootstrap::vk-bootstrap
         Vulkan::Vulkan
         VulkanMemoryAllocator
 )
 
 add_custom_command(
-        TARGET ${TARGET_NAME}
+        TARGET ${LIB_NAME}
         POST_BUILD
         COMMAND
         ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
 )
+
+# Examples
+
+add_executable(UpdateExample src/examples/update.cpp)
+target_link_libraries(UpdateExample ${LIB_NAME})
+
+add_executable(CubesExample src/examples/cubes.cpp)
+target_link_libraries(CubesExample ${LIB_NAME})

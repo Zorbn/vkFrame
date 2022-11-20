@@ -34,8 +34,8 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
     std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback,
-    std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
     std::function<void(VulkanState& vulkanState)> updateCallback,
+    std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
     std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
     std::function<void(VulkanState& vulkanState)> cleanupCallback) {
 

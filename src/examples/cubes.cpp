@@ -1,36 +1,145 @@
-#include "renderer/renderer.hpp"
+#include "../renderer/renderer.hpp"
 
-const std::vector<Vertex> testVertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+/*
+ * Cubes:
+ * Generate a small voxel mesh. The cubes were a lie, there aren't really any cubes.
+ */
 
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+// TODO:
+// Texture arrays,
+// Requires Vertex with 3d UV, make vertex types up to the user.
+
+const std::array<int32_t, 4 * 4 * 4> voxelData = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+
+    0, 0, 0, 1,
+    0, 0, 1, 0,
+    0, 1, 0, 0,
+    1, 0, 0, 0,
+
+    1, 1, 1, 1,
+    1, 0, 0, 1,
+    1, 0, 0, 1,
+    1, 1, 1, 1,
+
+    0, 0, 0, 0,
+    0, 1, 1, 0,
+    0, 1, 1, 0,
+    0, 0, 0, 0,
 };
 
-const std::vector<uint16_t> testIndices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
+const std::array<std::array<glm::vec3, 4>, 6> cubeVertices = {{
+    // Forward
+    {
+        glm::vec3(0, 0, 0),
+        glm::vec3(0, 1, 0),
+        glm::vec3(1, 1, 0),
+        glm::vec3(1, 0, 0)
+    },
+    // Backward
+    {
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 1, 1),
+        glm::vec3(1, 1, 1),
+        glm::vec3(1, 0, 1)
+    },
+    // Right
+    {
+        glm::vec3(1, 0, 0),
+        glm::vec3(1, 0, 1),
+        glm::vec3(1, 1, 1),
+        glm::vec3(1, 1, 0)
+    },
+    // Left
+    {
+        glm::vec3(0, 0, 0),
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 1, 1),
+        glm::vec3(0, 1, 0)
+    },
+    // Up
+    {
+        glm::vec3(0, 1, 0),
+        glm::vec3(0, 1, 1),
+        glm::vec3(1, 1, 1),
+        glm::vec3(1, 1, 0)
+    },
+    // Down
+    {
+        glm::vec3(0, 0, 0),
+        glm::vec3(0, 0, 1),
+        glm::vec3(1, 0, 1),
+        glm::vec3(1, 0, 0)
+    }
+}};
 
-const std::vector<Vertex> testVertices2 = {
-    {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}
-};
+const std::array<std::array<glm::vec2, 4>, 6> cubeUvs = {{
+    // Forward
+    {
+        glm::vec2(1, 1),
+        glm::vec2(1, 0),
+        glm::vec2(0, 0),
+        glm::vec2(0, 1)
+    },
+    // Backward
+    {
+        glm::vec2(0, 1),
+        glm::vec2(0, 0),
+        glm::vec2(1, 0),
+        glm::vec2(1, 1)
+    },
+    // Right
+    {
+        glm::vec2(1, 1),
+        glm::vec2(0, 1),
+        glm::vec2(0, 0),
+        glm::vec2(1, 0)
+    },
+    // Left
+    {
+        glm::vec2(0, 1),
+        glm::vec2(1, 1),
+        glm::vec2(1, 0),
+        glm::vec2(0, 0)
+    },
+    // Up
+    {
+        glm::vec2(0, 1),
+        glm::vec2(0, 0),
+        glm::vec2(1, 0),
+        glm::vec2(1, 1)
+    },
+    // Down
+    {
+        glm::vec2(0, 1),
+        glm::vec2(0, 0),
+        glm::vec2(1, 0),
+        glm::vec2(1, 1)
+    }
+}};
 
-const std::vector<uint16_t> testIndices2 = {
-    0, 1, 2
-};
+const std::array<std::array<uint16_t, 6>, 6> cubeIndices = {{
+    { 0, 1, 2, 0, 2, 3 }, // Forward
+    { 0, 2, 1, 0, 3, 2 }, // Backward
+    { 0, 2, 1, 0, 3, 2 }, // Right
+    { 0, 1, 2, 0, 2, 3 }, // Left
+    { 0, 1, 2, 0, 2, 3 }, // Up
+    { 0, 2, 1, 0, 3, 2 }  // Down
+}};
+
+const std::array<std::array<int32_t, 3>, 6> directions = {{
+    { 0, 0, -1 },
+    { 0, 0, 1 },
+    { 1, 0, 0 },
+    { -1, 0, 0 },
+    { 0, 1, 0 },
+    { 0, -1, 0 }
+}};
 
 struct InstanceData {
-public:
-    glm::vec3 pos;
-
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 1;
@@ -40,13 +149,8 @@ public:
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 1;
-        attributeDescriptions[0].location = 3;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = 0;
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
 
         return attributeDescriptions;
     }
@@ -59,7 +163,7 @@ struct UniformBufferData {
 };
 
 class App {
-public:
+private:
     Pipeline pipeline;
     RenderPass renderPass;
 
@@ -68,9 +172,49 @@ public:
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<InstanceData> updateTestModel;
+    Model<InstanceData> voxelModel;
 
-    uint32_t frameCount = 0;
+    std::vector<Vertex> voxelVertices;
+    std::vector<uint16_t> voxelIndices;
+
+public:
+    int32_t getVoxel(size_t x, size_t y, size_t z) {
+        if (x < 0 || x >= 4 || y < 0 || y >= 4 || z < 0 || z >= 4) {
+            return 0;
+        }
+
+        return voxelData[x + y * 4 + z * 4 * 4];
+    }
+
+    void generateVoxelMesh() {
+        for (size_t x = 0; x < 4; x++)
+        for (size_t y = 0; y < 4; y++)
+        for (size_t z = 0; z < 4; z++) {
+            int32_t voxel = getVoxel(x, y, z);
+
+            if (voxel == 0) continue;
+
+            for (size_t face = 0; face < 6; face++) {
+                if (getVoxel(x +  + directions[face][0], y + directions[face][1], z + directions[face][2]) != 0) continue;
+
+                size_t vertexCount = voxelVertices.size();
+                for (uint16_t index : cubeIndices[face]) {
+                    voxelIndices.push_back(index + vertexCount);
+                }
+
+                for (size_t i = 0; i < 4; i++) {
+                    glm::vec3 vertex = cubeVertices[face][i];
+                    glm::vec2 uv = cubeUvs[face][i];
+
+                    voxelVertices.push_back(Vertex {
+                        vertex + glm::vec3(x, y, z),
+                        glm::vec3(1.0, 1.0, 1.0),
+                        uv
+                    });
+                }
+            }
+        }
+    }
 
     void init(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
         vulkanState.swapchain.create(vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
@@ -82,7 +226,10 @@ public:
         textureImageView = textureImage.createTextureView(vulkanState.device);
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<InstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        generateVoxelMesh();
+        voxelModel = Model<InstanceData>::fromVerticesAndIndices(voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        std::vector<InstanceData> instances = {InstanceData{}};
+        voxelModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
         ubo.create(maxFramesInFlight, vulkanState.allocator);
 
         renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
@@ -137,7 +284,10 @@ public:
 
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create<InstanceData>("res/shader.vert.spv", "res/shader.frag.spv", vulkanState.device, renderPass);
+        pipeline.create<InstanceData>("res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass);
+    }
+
+    void update(VulkanState& vulkanState) {
     }
 
     void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
@@ -146,37 +296,17 @@ public:
         renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
         pipeline.bind(commandBuffer, currentFrame);
 
-        static auto startTime = std::chrono::high_resolution_clock::now();
-
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
         UniformBufferData uboData{};
-        uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 10.0f);
+        uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
         uboData.proj[1][1] *= -1;
 
         ubo.update(uboData);
 
-        std::vector<InstanceData> instances = {InstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
-        updateTestModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
-        updateTestModel.draw(commandBuffer);
+        voxelModel.draw(commandBuffer);
 
         renderPass.end(commandBuffer);
-    }
-
-    void update(VulkanState& vulkanState) {
-        uint32_t animFrame = frameCount / 3000;
-        if (frameCount % 3000 == 0) {
-            if (animFrame % 2 == 0) {
-                updateTestModel.update(testVertices2, testIndices2, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
-            } else {
-                updateTestModel.update(testVertices, testIndices, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
-            }
-        }
-
-        frameCount++;
     }
 
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {
@@ -193,7 +323,7 @@ public:
         vkDestroyImageView(vulkanState.device, textureImageView, nullptr);
         textureImage.destroy(vulkanState.allocator);
 
-        updateTestModel.destroy(vulkanState.allocator);
+        voxelModel.destroy(vulkanState.allocator);
     }
 
     int run() {
@@ -203,13 +333,13 @@ public:
             this->init(vulkanState, width, height, maxFramesInFlight);
         };
 
+        std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {
+            this->update(vulkanState);
+        };
+
         std::function<void(VulkanState&, VkCommandBuffer, uint32_t, uint32_t)> renderCallback = [&](VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
 
             this->render(vulkanState, commandBuffer, imageIndex, currentFrame);
-        };
-
-        std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {
-            this->update(vulkanState);
         };
 
         std::function<void(VulkanState&, int32_t, int32_t)> resizeCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height) {
@@ -221,7 +351,7 @@ public:
         };
 
         try {
-            renderer.run("Hello World", 640, 480, initCallback, renderCallback, updateCallback, resizeCallback, cleanupCallback);
+            renderer.run("Cubes", 640, 480, initCallback, updateCallback, renderCallback, resizeCallback, cleanupCallback);
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
             return EXIT_FAILURE;

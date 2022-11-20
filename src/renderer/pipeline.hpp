@@ -41,9 +41,16 @@ public:
         std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { Vertex::getBindingDescription(), T::getBindingDescription() };
         auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
         auto instanceAttributeDescriptions = T::getAttributeDescriptions();
-        std::array<VkVertexInputAttributeDescription, vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size()> attributeDescriptions;
-        auto current = std::copy(instanceAttributeDescriptions.begin(), instanceAttributeDescriptions.end(), attributeDescriptions.begin());
-        std::copy(vertexAttributeDescriptions.begin(), vertexAttributeDescriptions.end(), current);
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+        attributeDescriptions.reserve(vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size());
+
+        for (VkVertexInputAttributeDescription desc : vertexAttributeDescriptions) {
+            attributeDescriptions.push_back(desc);
+        }
+
+        for (VkVertexInputAttributeDescription desc : instanceAttributeDescriptions) {
+            attributeDescriptions.push_back(desc);
+        }
 
         vertexInputInfo.vertexBindingDescriptionCount = 2;
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
