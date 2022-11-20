@@ -41,45 +41,38 @@
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
-struct UniformBufferData {
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 proj;
+struct VulkanState {
+    VkPhysicalDevice physicalDevice;
+    VkDevice device;
+    VkSurfaceKHR surface;
+    VkQueue graphicsQueue;
+    VmaAllocator allocator;
+    Swapchain swapchain;
+    Commands commands;
 };
 
 class Renderer {
 public:
-    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
-        VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-        Swapchain& swapchain, Commands& commands)> initCallback,
-        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
-        std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback,
-        std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);
+    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback,
+        std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+        std::function<void(VulkanState& vulkanState)> updateCallback,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
+        std::function<void(VulkanState& vulkanState)> cleanupCallback);
 
 private:
     GLFWwindow* window;
 
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
-    VkSurfaceKHR surface;
-
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device;
-
-    VkQueue graphicsQueue;
     VkQueue presentQueue;
+
+    VulkanState vulkanState;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
-
-    VmaAllocator allocator;
-
-    Commands commands;
-    Swapchain swapchain;
 
     bool framebufferResized = false;
 
@@ -87,21 +80,19 @@ private:
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-    void initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
-        uint32_t width, uint32_t height,uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback);
+    void initVulkan(std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
 
-    void mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback);
-    void drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback);
+    void mainLoop(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+        std::function<void(VulkanState& vulkanState)> updateCallback,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback);
+    void drawFrame(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback);
     void waitWhileMinimized();
 
-    void cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);
+    void cleanup(std::function<void(VulkanState& vulkanState)> cleanupCallback);
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     void setupDebugMessenger();

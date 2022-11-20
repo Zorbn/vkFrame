@@ -1,5 +1,7 @@
 #include "renderer.hpp"
 
+// TODO: Get rid of instanceData and customInstanceData
+
 const std::vector<Vertex> testVertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -27,6 +29,12 @@ const std::vector<uint16_t> testIndices2 = {
     0, 1, 2
 };
 
+struct UniformBufferData {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+};
+
 class App {
 public:
     Pipeline pipeline;
@@ -41,23 +49,22 @@ public:
 
     uint32_t frameCount = 0;
 
-    void init(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height,
-                uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands) {
-        swapchain.create(device, physicalDevice, surface, width, height);
+    void init(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
+        vulkanState.swapchain.create(vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
 
-        commands.createPool(physicalDevice, device, surface);
-        commands.createBuffers(device, maxFramesInFlight);
+        vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
+        vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
 
-        textureImage = Image::createTexture("res/testImg.png", allocator, commands, graphicsQueue, device);
-        textureImageView = textureImage.createTextureView(device);
-        textureSampler = textureImage.createTextureSampler(physicalDevice, device);
+        textureImage = Image::createTexture("res/testImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        textureImageView = textureImage.createTextureView(vulkanState.device);
+        textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
-        ubo.create(maxFramesInFlight, allocator);
+        updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        ubo.create(maxFramesInFlight, vulkanState.allocator);
 
-        renderPass.create(physicalDevice, device, allocator, swapchain, true);
+        renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
 
-        pipeline.createDescriptorSetLayout(device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+        pipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
             VkDescriptorSetLayoutBinding uboLayoutBinding{};
             uboLayoutBinding.binding = 0;
             uboLayoutBinding.descriptorCount = 1;
@@ -75,8 +82,8 @@ public:
             bindings.push_back(uboLayoutBinding);
             bindings.push_back(samplerLayoutBinding);
         });
-        pipeline.createDescriptorPool(maxFramesInFlight, device);
-        pipeline.createDescriptorSets(maxFramesInFlight, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
+        pipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device);
+        pipeline.createDescriptorSets(maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);
             bufferInfo.offset = 0;
@@ -105,13 +112,13 @@ public:
             descriptorWrites[1].descriptorCount = 1;
             descriptorWrites[1].pImageInfo = &imageInfo;
 
-            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", device, renderPass);
+        pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", vulkanState.device, renderPass);
     }
 
-    void render(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame) {
-        const VkExtent2D& extent = swapchain.getExtent();
+    void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
+        const VkExtent2D& extent = vulkanState.swapchain.getExtent();
 
         renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
         pipeline.bind(commandBuffer, currentFrame);
@@ -130,71 +137,64 @@ public:
         ubo.update(uboData);
 
         std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
-        updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
+        updateTestModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
         updateTestModel.draw(commandBuffer);
 
         renderPass.end(commandBuffer);
     }
 
-    void update(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands) {
+    void update(VulkanState& vulkanState) {
         uint32_t animFrame = frameCount / 3000;
         if (frameCount % 3000 == 0) {
             if (animFrame % 2 == 0) {
-                updateTestModel.update(testVertices2, testIndices2, commands, allocator, graphicsQueue, device);
+                updateTestModel.update(testVertices2, testIndices2, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
             } else {
-                updateTestModel.update(testVertices, testIndices, commands, allocator, graphicsQueue, device);
+                updateTestModel.update(testVertices, testIndices, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
             }
         }
 
         frameCount++;
     }
 
-    void resize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight) {
-        renderPass.recreate(physicalDevice, device, allocator, swapchain);
+    void resize(VulkanState& vulkanState, int32_t width, int32_t height) {
+        renderPass.recreate(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain);
     }
 
-    void cleanup(VkDevice device, VmaAllocator allocator) {
-        pipeline.cleanup(device);
-        renderPass.cleanup(allocator, device);
+    void cleanup(VulkanState& vulkanState) {
+        pipeline.cleanup(vulkanState.device);
+        renderPass.cleanup(vulkanState.allocator, vulkanState.device);
 
-        ubo.destroy(allocator);
+        ubo.destroy(vulkanState.allocator);
 
-        vkDestroySampler(device, textureSampler, nullptr);
-        vkDestroyImageView(device, textureImageView, nullptr);
-        textureImage.destroy(allocator);
+        vkDestroySampler(vulkanState.device, textureSampler, nullptr);
+        vkDestroyImageView(vulkanState.device, textureImageView, nullptr);
+        textureImage.destroy(vulkanState.allocator);
 
-        updateTestModel.destroy(allocator);
+        updateTestModel.destroy(vulkanState.allocator);
     }
 
     int run() {
         Renderer renderer;
 
-        // TODO: Make a struct that gets passed to these types of functions, because this is seriously horrible.
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height,
-            uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback = [&](VkPhysicalDevice physicalDevice, VkDevice device,
-            VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-            Swapchain& swapchain, Commands& commands) {
-
-            this->init(physicalDevice, device, surface, graphicsQueue, allocator, width, height, maxFramesInFlight, swapchain, commands);
+        std::function<void(VulkanState&, int32_t, int32_t, uint32_t)> initCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
+            this->init(vulkanState, width, height, maxFramesInFlight);
         };
 
-        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-            Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback = [&](VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-            Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame) {
+        std::function<void(VulkanState&, VkCommandBuffer, uint32_t, uint32_t)> renderCallback = [&](VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
 
-            this->render(device, commandBuffer, graphicsQueue, allocator, swapchain, commands, imageIndex, currentFrame);
+            this->render(vulkanState, commandBuffer, imageIndex, currentFrame);
         };
 
-        std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback = [&](VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands) {
-            this->update(device, graphicsQueue, allocator, commands);
+        std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {
+            this->update(vulkanState);
         };
 
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback = [&](VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight) {
-            this->resize(physicalDevice, device, allocator, swapchain, windowWidth, windowHeight);
+        std::function<void(VulkanState&, int32_t, int32_t)> resizeCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height) {
+            this->resize(vulkanState, width, height);
         };
 
-        std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback = [&](VkDevice device, VmaAllocator allocator) {
-            this->cleanup(device, allocator);
+        std::function<void(VulkanState&)> cleanupCallback = [&](VulkanState& vulkanState) {
+            this->cleanup(vulkanState);
         };
 
         try {

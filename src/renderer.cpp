@@ -32,14 +32,12 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
-    VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-    Swapchain& swapchain, Commands& commands)> initCallback,
-    std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-    Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
-    std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
-    std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback,
-    std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
+void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
+    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback,
+    std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+    std::function<void(VulkanState& vulkanState)> updateCallback,
+    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
+    std::function<void(VulkanState& vulkanState)> cleanupCallback) {
 
     initWindow(windowTitle, windowWidth, windowHeight);
     initVulkan(initCallback);
@@ -62,8 +60,7 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int heig
     app->framebufferResized = true;
 }
 
-void Renderer::initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
-        uint32_t width, uint32_t height, uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback) {
+void Renderer::initVulkan(std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback) {
 
     createInstance();
     setupDebugMessenger();
@@ -76,7 +73,7 @@ void Renderer::initVulkan(std::function<void(VkPhysicalDevice physicalDevice, Vk
     int32_t height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    initCallback(physicalDevice, device, surface, graphicsQueue, allocator, width, height, MAX_FRAMES_IN_FLIGHT, swapchain, commands);
+    initCallback(vulkanState, width, height, MAX_FRAMES_IN_FLIGHT);
 
     createSyncObjects();
 }
@@ -89,24 +86,25 @@ void Renderer::createAllocator() {
 
     VmaAllocatorCreateInfo aci = {};
     aci.vulkanApiVersion = VK_API_VERSION_1_2;
-    aci.physicalDevice = physicalDevice;
-    aci.device = device;
+    aci.physicalDevice = vulkanState.physicalDevice;
+    aci.device = vulkanState.device;
     aci.instance = instance;
     aci.pVulkanFunctions = &vkFuncs;
 
-    vmaCreateAllocator(&aci, &allocator);
+    vmaCreateAllocator(&aci, &vulkanState.allocator);
 }
 
-void Renderer::mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback) {
+void Renderer::mainLoop(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+    std::function<void(VulkanState& vulkanState)> updateCallback,
+    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback) {
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        updateCallback(device, graphicsQueue, allocator, commands);
+        updateCallback(vulkanState);
         drawFrame(renderCallback, resizeCallback);
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(vulkanState.device);
 }
 
 void Renderer::waitWhileMinimized() {
@@ -119,28 +117,28 @@ void Renderer::waitWhileMinimized() {
     }
 }
 
-void Renderer::cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
-    swapchain.cleanup(allocator, device);
+void Renderer::cleanup(std::function<void(VulkanState& vulkanState)> cleanupCallback) {
+    vulkanState.swapchain.cleanup(vulkanState.allocator, vulkanState.device);
 
-    cleanupCallback(device, allocator);
+    cleanupCallback(vulkanState);
 
-    vmaDestroyAllocator(allocator);
+    vmaDestroyAllocator(vulkanState.allocator);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(device, inFlightFences[i], nullptr);
+        vkDestroySemaphore(vulkanState.device, renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(vulkanState.device, imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(vulkanState.device, inFlightFences[i], nullptr);
     }
 
-    commands.destroy(device);
+    vulkanState.commands.destroy(vulkanState.device);
 
-    vkDestroyDevice(device, nullptr);
+    vkDestroyDevice(vulkanState.device, nullptr);
 
     if (enableValidationLayers) {
         DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     }
 
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroySurfaceKHR(instance, vulkanState.surface, nullptr);
     vkDestroyInstance(instance, nullptr);
 
     glfwDestroyWindow(window);
@@ -207,7 +205,7 @@ void Renderer::setupDebugMessenger() {
 }
 
 void Renderer::createSurface() {
-    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(instance, window, nullptr, &vulkanState.surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
 }
@@ -225,18 +223,18 @@ void Renderer::pickPhysicalDevice() {
 
     for (const auto& device : devices) {
         if (isDeviceSuitable(device)) {
-            physicalDevice = device;
+            vulkanState.physicalDevice = device;
             break;
         }
     }
 
-    if (physicalDevice == VK_NULL_HANDLE) {
+    if (vulkanState.physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("Failed to find a suitable GPU!");
     }
 }
 
 void Renderer::createLogicalDevice() {
-    QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(physicalDevice, surface);
+    QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(vulkanState.physicalDevice, vulkanState.surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -272,12 +270,12 @@ void Renderer::createLogicalDevice() {
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+    if (vkCreateDevice(vulkanState.physicalDevice, &createInfo, nullptr, &vulkanState.device) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create logical device!");
     }
 
-    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(vulkanState.device, indices.graphicsFamily.value(), 0, &vulkanState.graphicsQueue);
+    vkGetDeviceQueue(vulkanState.device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
 bool Renderer::hasStencilComponent(VkFormat format) {
@@ -286,7 +284,7 @@ bool Renderer::hasStencilComponent(VkFormat format) {
 
 uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(vulkanState.physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -310,39 +308,39 @@ void Renderer::createSyncObjects() {
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(vulkanState.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(vulkanState.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(vulkanState.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create synchronization objects for a frame!");
         }
     }
 }
 
-void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
-        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback) {
-    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+void Renderer::drawFrame(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback) {
+
+    vkWaitForFences(vulkanState.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    VkResult result = swapchain.getNextImage(device, imageAvailableSemaphores[currentFrame], imageIndex);
+    VkResult result = vulkanState.swapchain.getNextImage(vulkanState.device, imageAvailableSemaphores[currentFrame], imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         waitWhileMinimized();
         int32_t width;
         int32_t height;
         glfwGetFramebufferSize(window, &width, &height);
-        swapchain.recreate(allocator, device, physicalDevice, surface, width, height);
-        resizeCallback(physicalDevice, device, allocator, swapchain, width, height);
+        vulkanState.swapchain.recreate(vulkanState.allocator, vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
+        resizeCallback(vulkanState, width, height);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
+    vkResetFences(vulkanState.device, 1, &inFlightFences[currentFrame]);
 
-    commands.resetBuffers(imageIndex, currentFrame);
-    const VkCommandBuffer& currentBuffer = commands.getBuffer(currentFrame);
-    renderCallback(device, currentBuffer, graphicsQueue, allocator, swapchain, commands, imageIndex, currentFrame);
+    vulkanState.commands.resetBuffers(imageIndex, currentFrame);
+    const VkCommandBuffer& currentBuffer = vulkanState.commands.getBuffer(currentFrame);
+    renderCallback(vulkanState, currentBuffer, imageIndex, currentFrame);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -360,7 +358,7 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(vulkanState.graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("Failed to submit draw command buffer!");
     }
 
@@ -370,7 +368,7 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = {swapchain.getSwapchain()};
+    VkSwapchainKHR swapChains[] = {vulkanState.swapchain.getSwapchain()};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
 
@@ -384,8 +382,8 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
         int32_t width;
         int32_t height;
         glfwGetFramebufferSize(window, &width, &height);
-        swapchain.recreate(allocator, device, physicalDevice, surface, width, height);
-        resizeCallback(physicalDevice, device, allocator, swapchain, width, height);
+        vulkanState.swapchain.recreate(vulkanState.allocator, vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
+        resizeCallback(vulkanState, width, height);
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("Failed to present swap chain image!");
     }
@@ -394,13 +392,13 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
-    QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(device, surface);
+    QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(device, vulkanState.surface);
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {
-        SwapchainSupportDetails swapchainSupport = swapchain.querySupport(device, surface);
+        SwapchainSupportDetails swapchainSupport = vulkanState.swapchain.querySupport(device, vulkanState.surface);
         swapChainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
     }
 
