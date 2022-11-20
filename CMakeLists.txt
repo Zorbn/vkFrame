@@ -43,6 +43,7 @@ add_executable(
         src/swapchain.cpp src/swapchain.hpp
         src/image.cpp src/image.hpp
         src/pipeline.cpp src/pipeline.hpp
+        src/renderPass.cpp src/renderPass.hpp
         src/uniformBuffer.hpp
         src/model.hpp
         src/queueFamilyIndices.hpp

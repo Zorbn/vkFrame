@@ -1,11 +1,5 @@
 #include "renderer.hpp"
 
-// TODO:
-// - Seperate renderpass from pipeline
-// - Allow user to handle the renderpasses and pipelines
-// - Allow the creation of multiple pipelines per render pass
-// - Allow user to set vsync mode/max fps
-
 const std::vector<Vertex> testVertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -35,6 +29,9 @@ const std::vector<uint16_t> testIndices2 = {
 
 class App {
 public:
+    Pipeline pipeline;
+    RenderPass renderPass;
+
     Image textureImage;
     VkImageView textureImageView;
     VkSampler textureSampler;
@@ -45,9 +42,8 @@ public:
     uint32_t frameCount = 0;
 
     void init(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height,
-                uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline& pipeline) {
+                uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands) {
         swapchain.create(device, physicalDevice, surface, width, height);
-        swapchain.createImageViews(device);
 
         commands.createPool(physicalDevice, device, surface);
         commands.createBuffers(device, maxFramesInFlight);
@@ -58,6 +54,8 @@ public:
 
         updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
         ubo.create(maxFramesInFlight, allocator);
+
+        renderPass.create(physicalDevice, device, allocator, swapchain, true);
 
         pipeline.createDescriptorSetLayout(device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
             VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -109,21 +107,19 @@ public:
 
             vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", true, swapchain, physicalDevice, device);
-
-        swapchain.createDepthResources(allocator, physicalDevice, device);
-        swapchain.createFramebuffers(device, pipeline.renderPass);
+        pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", device, renderPass);
     }
 
-    void render(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame) {
-        pipeline.beginPass(imageIndex, currentFrame, commandBuffer, swapchain, 0.0f, 0.0f, 0.0f, 1.0f);
+    void render(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame) {
+        const VkExtent2D& extent = swapchain.getExtent();
+
+        renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
+        pipeline.bind(commandBuffer, currentFrame);
 
         static auto startTime = std::chrono::high_resolution_clock::now();
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-        const VkExtent2D& extent = swapchain.getExtent();
 
         UniformBufferData uboData{};
         uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -137,7 +133,7 @@ public:
         updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
         updateTestModel.draw(commandBuffer);
 
-        pipeline.endPass(commandBuffer);
+        renderPass.end(commandBuffer);
     }
 
     void update(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands) {
@@ -153,7 +149,14 @@ public:
         frameCount++;
     }
 
+    void resize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight) {
+        renderPass.recreate(physicalDevice, device, allocator, swapchain);
+    }
+
     void cleanup(VkDevice device, VmaAllocator allocator) {
+        pipeline.cleanup(device);
+        renderPass.cleanup(allocator, device);
+
         ubo.destroy(allocator);
 
         vkDestroySampler(device, textureSampler, nullptr);
@@ -168,21 +171,26 @@ public:
 
         // TODO: Make a struct that gets passed to these types of functions, because this is seriously horrible.
         std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height,
-                uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline& pipeline)> initCallback = [&](VkPhysicalDevice physicalDevice, VkDevice device,
-                VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-                Swapchain& swapchain, Commands& commands, Pipeline& pipeline) {
-                    this->init(physicalDevice, device, surface, graphicsQueue, allocator, width, height, maxFramesInFlight, swapchain, commands, pipeline);
-                };
+            uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback = [&](VkPhysicalDevice physicalDevice, VkDevice device,
+            VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
+            Swapchain& swapchain, Commands& commands) {
 
-        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
-            Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback = [&](VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+            this->init(physicalDevice, device, surface, graphicsQueue, allocator, width, height, maxFramesInFlight, swapchain, commands);
+        };
+
+        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
+            Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback = [&](VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
             Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame) {
 
-            this->render(device, commandBuffer, graphicsQueue, allocator, pipeline, swapchain, commands, imageIndex, currentFrame);
+            this->render(device, commandBuffer, graphicsQueue, allocator, swapchain, commands, imageIndex, currentFrame);
         };
 
         std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback = [&](VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands) {
             this->update(device, graphicsQueue, allocator, commands);
+        };
+
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback = [&](VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight) {
+            this->resize(physicalDevice, device, allocator, swapchain, windowWidth, windowHeight);
         };
 
         std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback = [&](VkDevice device, VmaAllocator allocator) {
@@ -190,7 +198,7 @@ public:
         };
 
         try {
-            renderer.run("Hello World", 640, 480, initCallback, renderCallback, updateCallback, cleanupCallback);
+            renderer.run("Hello World", 640, 480, initCallback, renderCallback, updateCallback, resizeCallback, cleanupCallback);
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
             return EXIT_FAILURE;

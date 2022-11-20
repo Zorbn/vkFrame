@@ -51,10 +51,11 @@ class Renderer {
 public:
     void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
         VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-        Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback,
-        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Swapchain& swapchain, Commands& commands)> initCallback,
+        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
         Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
         std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback,
         std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);
 
 private:
@@ -79,7 +80,6 @@ private:
 
     Commands commands;
     Swapchain swapchain;
-    Pipeline pipeline;
 
     bool framebufferResized = false;
 
@@ -88,18 +88,17 @@ private:
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     void initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
-        uint32_t width, uint32_t height,uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback);
+        uint32_t width, uint32_t height,uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
 
-    void mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback);
-    void drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback);
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, std::function<void(VkDevice device, VkCommandBuffer commandBuffer,
-        VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex,
-        const uint32_t currentFrame)> renderCallback);
+    void mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback);
+    void drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback);
     void waitWhileMinimized();
 
     void cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);

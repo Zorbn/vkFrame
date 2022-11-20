@@ -10,7 +10,7 @@
 #include "queueFamilyIndices.hpp"
 #include "image.hpp"
 
-struct SwapChainSupportDetails {
+struct SwapchainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
@@ -18,37 +18,22 @@ struct SwapChainSupportDetails {
 
 class Swapchain {
 public:
-    void create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight);
+    void create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight, VkPresentModeKHR preferredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR);
     void cleanup(VmaAllocator allocator, VkDevice device);
-    void recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkRenderPass renderPass, int32_t windowWidth, int32_t windowHeight);
-    void createFramebuffers(VkDevice device, VkRenderPass renderPass);
-    void createDepthResources(VmaAllocator allocator, VkPhysicalDevice physicalDevice, VkDevice device);
+    void recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight);
 
-    void createImageViews(VkDevice device);
-
-    VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
-
+    SwapchainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
     VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredPresentMode);
     VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, int32_t windowWidth, int32_t windowHeight);
-    SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
-
     VkResult getNextImage(VkDevice device, VkSemaphore semaphore, uint32_t& imageIndex);
 
     const VkSwapchainKHR& getSwapchain();
     const VkExtent2D& getExtent();
     const VkFormat& getImageFormat();
-    const VkFramebuffer& getFramebuffer(const uint32_t imageIndex);
 
 private:
     VkSwapchainKHR swapchain;
-    std::vector<Image> images;
-    VkFormat imageFormat;
     VkExtent2D extent;
-    std::vector<VkImageView> imageViews;
-    std::vector<VkFramebuffer> framebuffers;
-
-    Image depthImage;
-    VkImageView depthImageView;
+    VkFormat imageFormat;
 };

@@ -34,15 +34,16 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
     VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
-    Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback,
-    std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+    Swapchain& swapchain, Commands& commands)> initCallback,
+    std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
     Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
     std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+    std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback,
     std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
 
     initWindow(windowTitle, windowWidth, windowHeight);
     initVulkan(initCallback);
-    mainLoop(renderCallback, updateCallback);
+    mainLoop(renderCallback, updateCallback, resizeCallback);
     cleanup(cleanupCallback);
 }
 
@@ -62,7 +63,7 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int heig
 }
 
 void Renderer::initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
-        uint32_t width, uint32_t height, uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback) {
+        uint32_t width, uint32_t height, uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands)> initCallback) {
 
     createInstance();
     setupDebugMessenger();
@@ -75,7 +76,7 @@ void Renderer::initVulkan(std::function<void(VkPhysicalDevice physicalDevice, Vk
     int32_t height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    initCallback(physicalDevice, device, surface, graphicsQueue, allocator, width, height, MAX_FRAMES_IN_FLIGHT, swapchain, commands, pipeline);
+    initCallback(physicalDevice, device, surface, graphicsQueue, allocator, width, height, MAX_FRAMES_IN_FLIGHT, swapchain, commands);
 
     createSyncObjects();
 }
@@ -96,12 +97,13 @@ void Renderer::createAllocator() {
     vmaCreateAllocator(&aci, &allocator);
 }
 
-void Renderer::mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback) {
+void Renderer::mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         updateCallback(device, graphicsQueue, allocator, commands);
-        drawFrame(renderCallback);
+        drawFrame(renderCallback, resizeCallback);
     }
 
     vkDeviceWaitIdle(device);
@@ -119,7 +121,6 @@ void Renderer::waitWhileMinimized() {
 
 void Renderer::cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
     swapchain.cleanup(allocator, device);
-    pipeline.cleanup(device);
 
     cleanupCallback(device, allocator);
 
@@ -317,8 +318,9 @@ void Renderer::createSyncObjects() {
     }
 }
 
-void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
-        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback) {
+void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
+        std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, int32_t windowWidth, int32_t windowHeight)> resizeCallback) {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -329,7 +331,8 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
         int32_t width;
         int32_t height;
         glfwGetFramebufferSize(window, &width, &height);
-        swapchain.recreate(allocator, device, physicalDevice, surface, pipeline.renderPass, width, height);
+        swapchain.recreate(allocator, device, physicalDevice, surface, width, height);
+        resizeCallback(physicalDevice, device, allocator, swapchain, width, height);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
@@ -339,7 +342,7 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
 
     commands.resetBuffers(imageIndex, currentFrame);
     const VkCommandBuffer& currentBuffer = commands.getBuffer(currentFrame);
-    recordCommandBuffer(currentBuffer, imageIndex, renderCallback);
+    renderCallback(device, currentBuffer, graphicsQueue, allocator, swapchain, commands, imageIndex, currentFrame);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -381,18 +384,13 @@ void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer com
         int32_t width;
         int32_t height;
         glfwGetFramebufferSize(window, &width, &height);
-        swapchain.recreate(allocator, device, physicalDevice, surface, pipeline.renderPass, width, height);
+        swapchain.recreate(allocator, device, physicalDevice, surface, width, height);
+        resizeCallback(physicalDevice, device, allocator, swapchain, width, height);
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("Failed to present swap chain image!");
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, std::function<void(VkDevice device, VkCommandBuffer commandBuffer,
-    VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex,
-    const uint32_t currentFrame)> renderCallback) {
-    renderCallback(device, commandBuffer, graphicsQueue, allocator, pipeline, swapchain, commands, imageIndex, currentFrame);
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
@@ -402,7 +400,7 @@ bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {
-        SwapChainSupportDetails swapchainSupport = swapchain.querySupport(device, surface);
+        SwapchainSupportDetails swapchainSupport = swapchain.querySupport(device, surface);
         swapChainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
     }
 
