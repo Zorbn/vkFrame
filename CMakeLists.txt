@@ -30,7 +30,6 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
-add_subdirectory(deps/glad)
 
 add_executable(
         game
@@ -60,7 +59,6 @@ target_link_libraries(
         game
         glm
         glfw
-        glad
         vk-bootstrap::vk-bootstrap
         Vulkan::Vulkan
         VulkanMemoryAllocator

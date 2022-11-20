@@ -24,13 +24,13 @@ Buffer Buffer::create(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsa
 }
 
 void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice device, Commands& commands, Buffer& dst) {
-    VkCommandBuffer commandBuffer = commands.beginSingleTimeCommands(graphicsQueue, device);
+    VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = dst.byteSize;
     vkCmdCopyBuffer(commandBuffer, buffer, dst.buffer, 1, &copyRegion);
 
-    commands.endSingleTimeCommands(commandBuffer, graphicsQueue, device);
+    commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
 Buffer Buffer::fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices) {

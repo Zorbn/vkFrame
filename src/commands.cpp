@@ -1,6 +1,6 @@
 #include "commands.hpp"
 
-VkCommandBuffer Commands::beginSingleTimeCommands(VkQueue graphicsQueue, VkDevice device) {
+VkCommandBuffer Commands::beginSingleTime(VkQueue graphicsQueue, VkDevice device) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -19,7 +19,7 @@ VkCommandBuffer Commands::beginSingleTimeCommands(VkQueue graphicsQueue, VkDevic
     return commandBuffer;
 }
 
-void Commands::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device) {
+void Commands::endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -33,7 +33,7 @@ void Commands::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkQueue grap
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
-void Commands::createCommandPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface) {
+void Commands::createPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface) {
     QueueFamilyIndices queueFamilyIndices = QueueFamilyIndices::findQueueFamilies(physicalDevice, surface);
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -46,18 +46,26 @@ void Commands::createCommandPool(VkPhysicalDevice physicalDevice, VkDevice devic
     }
 }
 
-void Commands::createCommandBuffers(VkDevice device, size_t maxFramesInFlight) {
-    commandBuffers.resize(maxFramesInFlight);
+void Commands::createBuffers(VkDevice device, size_t maxFramesInFlight) {
+    buffers.resize(maxFramesInFlight);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+    allocInfo.commandBufferCount = (uint32_t) buffers.size();
 
-    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocInfo, buffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate command buffers!");
     }
+}
+
+void Commands::resetBuffers(const uint32_t imageIndex, const uint32_t currentFrame) {
+    vkResetCommandBuffer(buffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+}
+
+VkCommandBuffer Commands::getBuffer(const uint32_t currentFrame) {
+    return buffers[currentFrame];
 }
 
 void Commands::destroy(VkDevice device) {

@@ -8,16 +8,18 @@
 
 class Commands {
 public:
-    VkCommandPool commandPool;
-    std::vector<VkCommandBuffer> commandBuffers;
+    VkCommandBuffer beginSingleTime(VkQueue graphicsQueue, VkDevice device);
+    void endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device);
 
-    VkCommandBuffer beginSingleTimeCommands(VkQueue graphicsQueue, VkDevice device);
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device);
+    void createPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface);
 
-    void createCommandPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface);
-
-    void createCommandBuffers(VkDevice device, size_t maxFramesInFlight);
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void createBuffers(VkDevice device, size_t maxFramesInFlight);
+    void resetBuffers(const uint32_t imageIndex, const uint32_t currentFrame);
+    VkCommandBuffer getBuffer(const uint32_t currentFrame);
 
     void destroy(VkDevice device);
+
+private:
+    VkCommandPool commandPool;
+    std::vector<VkCommandBuffer> buffers;
 };

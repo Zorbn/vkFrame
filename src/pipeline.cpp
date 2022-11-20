@@ -225,7 +225,7 @@ void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice d
     }
 }
 
-void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, std::vector<VkDescriptorSet>&, size_t)> setupDescriptor) {
+void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor) {
     std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -240,8 +240,48 @@ void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice d
 
     for (size_t i = 0; i < maxFramesInFlight; i++) {
         std::vector<VkWriteDescriptorSet> descriptorWrites;
-        setupDescriptor(descriptorWrites, descriptorSets, i);
+        setupDescriptor(descriptorWrites, descriptorSets[i], i);
     }
+}
+
+void Pipeline::beginPass(const uint32_t imageIndex, const uint32_t currentFrame, VkCommandBuffer commandBuffer, Swapchain& swapchain, float clearColorR, float clearColorB, float clearColorG, float clearColorA) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to begin recording command buffer!");
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapchain.framebuffers[imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapchain.extent;
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{clearColorR, clearColorG, clearColorB, clearColorA}};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    bind(commandBuffer, currentFrame);
+}
+
+void Pipeline::endPass(VkCommandBuffer commandBuffer) {
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to record command buffer!");
+    }
+}
+
+void Pipeline::bind(VkCommandBuffer commandBuffer, int32_t currentFrame) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 }
 
 VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code, VkDevice device) {
@@ -280,4 +320,5 @@ void Pipeline::cleanup(VkDevice device) {
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
+    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }

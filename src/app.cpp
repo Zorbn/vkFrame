@@ -84,8 +84,6 @@ void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
     app->framebufferResized = true;
 }
 
-// TODO: See if all of these create methods can be replaced with constructors.
-// TODO: Remove unnecessary public variables in all the new classes/structs.
 void App::initVulkan() {
     createInstance();
     setupDebugMessenger();
@@ -100,8 +98,8 @@ void App::initVulkan() {
     swapchain.create(device, physicalDevice, surface, width, height);
     swapchain.createImageViews(device);
 
-    commands.createCommandPool(physicalDevice, device, surface);
-    commands.createCommandBuffers(device, MAX_FRAMES_IN_FLIGHT);
+    commands.createPool(physicalDevice, device, surface);
+    commands.createBuffers(device, MAX_FRAMES_IN_FLIGHT);
 
     textureImage = Image::createTextureImage("res/testImg.png", allocator, commands, graphicsQueue, device);
     textureImageView = textureImage.createTextureView(device);
@@ -129,7 +127,7 @@ void App::initVulkan() {
         bindings.push_back(samplerLayoutBinding);
     });
     pipeline.createDescriptorPool(MAX_FRAMES_IN_FLIGHT, device);
-    pipeline.createDescriptorSets(MAX_FRAMES_IN_FLIGHT, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, std::vector<VkDescriptorSet>& descriptorSets, size_t i) {
+    pipeline.createDescriptorSets(MAX_FRAMES_IN_FLIGHT, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = ubo.getBuffer(i);
         bufferInfo.offset = 0;
@@ -143,7 +141,7 @@ void App::initVulkan() {
         descriptorWrites.resize(2);
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSets[i];
+        descriptorWrites[0].dstSet = descriptorSet;
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -151,7 +149,7 @@ void App::initVulkan() {
         descriptorWrites[0].pBufferInfo = &bufferInfo;
 
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSets[i];
+        descriptorWrites[1].dstSet = descriptorSet;
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -219,8 +217,6 @@ void App::cleanup() {
     pipeline.cleanup(device);
 
     ubo.destroy(allocator);
-
-    vkDestroyDescriptorPool(device, pipeline.descriptorPool, nullptr);
 
     vkDestroySampler(device, textureSampler, nullptr);
     vkDestroyImageView(device, textureImageView, nullptr);
@@ -441,23 +437,11 @@ void App::drawFrame() {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    UniformBufferData uboData{};
-    uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    uboData.proj = glm::perspective(glm::radians(45.0f), swapchain.extent.width / (float) swapchain.extent.height, 0.1f, 10.0f);
-    uboData.proj[1][1] *= -1;
-
-    ubo.update(uboData);
-
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-    vkResetCommandBuffer(commands.commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    recordCommandBuffer(commands.commandBuffers[currentFrame], imageIndex);
+    commands.resetBuffers(imageIndex, currentFrame);
+    VkCommandBuffer currentBuffer = commands.getBuffer(currentFrame);
+    recordCommandBuffer(currentBuffer, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -469,7 +453,7 @@ void App::drawFrame() {
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commands.commandBuffers[currentFrame];
+    submitInfo.pCommandBuffers = &currentBuffer;
 
     VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
@@ -508,55 +492,40 @@ void App::drawFrame() {
 }
 
 void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    pipeline.beginPass(imageIndex, currentFrame, commandBuffer, swapchain, 0.0f, 0.0f, 0.0f, 1.0f);
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to begin recording command buffer!");
-    }
+    static auto startTime = std::chrono::high_resolution_clock::now();
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = pipeline.renderPass;
-    renderPassInfo.framebuffer = swapchain.framebuffers[imageIndex];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchain.extent;
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
+    UniformBufferData uboData{};
+    uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    uboData.proj = glm::perspective(glm::radians(45.0f), swapchain.extent.width / (float) swapchain.extent.height, 0.1f, 10.0f);
+    uboData.proj[1][1] *= -1;
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
+    ubo.update(uboData);
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) swapchain.extent.width;
+    viewport.height = (float) swapchain.extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = swapchain.extent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = (float) swapchain.extent.width;
-        viewport.height = (float) swapchain.extent.height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
+    updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
+    updateTestModel.draw(commandBuffer);
 
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = swapchain.extent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
-        updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
-        // TODO: Maybe this should just take a pipeline, also streamline pipeline class cleanup.
-        updateTestModel.draw(commandBuffer, pipeline.pipelineLayout, pipeline.descriptorSets[currentFrame]);
-
-    vkCmdEndRenderPass(commandBuffer);
-
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to record command buffer!");
-    }
+    pipeline.endPass(commandBuffer);
 }
 
 bool App::isDeviceSuitable(VkPhysicalDevice device) {

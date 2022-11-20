@@ -108,7 +108,7 @@ Image Image::createImage(VmaAllocator allocator, uint32_t width, uint32_t height
 }
 
 void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device) {
-    VkCommandBuffer commandBuffer = commands.beginSingleTimeCommands(graphicsQueue, device);
+    VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -151,11 +151,11 @@ void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLa
         1, &barrier
     );
 
-    commands.endSingleTimeCommands(commandBuffer, graphicsQueue, device);
+    commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
 void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t width, uint32_t height) {
-    VkCommandBuffer commandBuffer = commands.beginSingleTimeCommands(graphicsQueue, device);
+    VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
@@ -174,7 +174,7 @@ void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueu
 
     vkCmdCopyBufferToImage(commandBuffer, src.buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    commands.endSingleTimeCommands(commandBuffer, graphicsQueue, device);
+    commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
 void Image::destroy(VmaAllocator allocator) {

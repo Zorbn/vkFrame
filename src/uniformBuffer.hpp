@@ -8,7 +8,7 @@
 template <typename T>
 struct UniformBuffer {
 public:
-    void create(const size_t maxFramesInFlight, VmaAllocator allocator) {
+    void create(const uint32_t maxFramesInFlight, VmaAllocator allocator) {
         VkDeviceSize bufferByteSize = sizeof(T);
 
         buffers.resize(maxFramesInFlight);
@@ -28,7 +28,7 @@ public:
         }
     }
 
-    VkBuffer getBuffer(size_t i) {
+    VkBuffer getBuffer(uint32_t i) {
         return buffers[i].buffer;
     }
 
