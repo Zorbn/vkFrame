@@ -5,13 +5,10 @@
  * Generate a small voxel mesh. The cubes were a lie, there aren't really any cubes.
  */
 
-// TODO:
-// Texture arrays,
-
 struct VertexData {
     glm::vec3 pos;
     glm::vec3 color;
-    glm::vec2 texCoord;
+    glm::vec3 texCoord;
 
     static VkVertexInputBindingDescription VertexData::getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -37,7 +34,7 @@ struct VertexData {
 
         attributeDescriptions[2].binding = 0;
         attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[2].offset = offsetof(VertexData, texCoord);
 
         return attributeDescriptions;
@@ -71,23 +68,23 @@ const int32_t mapSize = 4;
 
 const std::array<int32_t, mapSize * mapSize * mapSize> voxelData = {
     1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1,
+    0, 4, 0, 0,
+    0, 0, 3, 0,
+    0, 0, 0, 2,
 
     0, 0, 0, 1,
-    0, 0, 1, 0,
-    0, 1, 0, 0,
-    1, 0, 0, 0,
+    0, 0, 3, 0,
+    0, 4, 0, 0,
+    2, 0, 0, 0,
 
-    1, 1, 1, 1,
-    1, 0, 0, 1,
-    1, 0, 0, 1,
-    1, 1, 1, 1,
+    3, 2, 1, 4,
+    2, 0, 0, 1,
+    1, 0, 0, 2,
+    4, 1, 2, 3,
 
     0, 0, 0, 0,
-    0, 1, 1, 0,
-    0, 1, 1, 0,
+    0, 1, 2, 0,
+    0, 4, 3, 0,
     0, 0, 0, 0,
 };
 
@@ -97,43 +94,43 @@ const std::array<std::array<glm::vec3, 4>, 6> cubeVertices = {{
         glm::vec3(0, 0, 0),
         glm::vec3(0, 1, 0),
         glm::vec3(1, 1, 0),
-        glm::vec3(1, 0, 0)
+        glm::vec3(1, 0, 0),
     },
     // Backward
     {
         glm::vec3(0, 0, 1),
         glm::vec3(0, 1, 1),
         glm::vec3(1, 1, 1),
-        glm::vec3(1, 0, 1)
+        glm::vec3(1, 0, 1),
     },
     // Right
     {
         glm::vec3(1, 0, 0),
         glm::vec3(1, 0, 1),
         glm::vec3(1, 1, 1),
-        glm::vec3(1, 1, 0)
+        glm::vec3(1, 1, 0),
     },
     // Left
     {
         glm::vec3(0, 0, 0),
         glm::vec3(0, 0, 1),
         glm::vec3(0, 1, 1),
-        glm::vec3(0, 1, 0)
+        glm::vec3(0, 1, 0),
     },
     // Up
     {
         glm::vec3(0, 1, 0),
         glm::vec3(0, 1, 1),
         glm::vec3(1, 1, 1),
-        glm::vec3(1, 1, 0)
+        glm::vec3(1, 1, 0),
     },
     // Down
     {
         glm::vec3(0, 0, 0),
         glm::vec3(0, 0, 1),
         glm::vec3(1, 0, 1),
-        glm::vec3(1, 0, 0)
-    }
+        glm::vec3(1, 0, 0),
+    },
 }};
 
 const std::array<std::array<glm::vec2, 4>, 6> cubeUvs = {{
@@ -142,43 +139,43 @@ const std::array<std::array<glm::vec2, 4>, 6> cubeUvs = {{
         glm::vec2(1, 1),
         glm::vec2(1, 0),
         glm::vec2(0, 0),
-        glm::vec2(0, 1)
+        glm::vec2(0, 1),
     },
     // Backward
     {
         glm::vec2(0, 1),
         glm::vec2(0, 0),
         glm::vec2(1, 0),
-        glm::vec2(1, 1)
+        glm::vec2(1, 1),
     },
     // Right
     {
         glm::vec2(1, 1),
         glm::vec2(0, 1),
         glm::vec2(0, 0),
-        glm::vec2(1, 0)
+        glm::vec2(1, 0),
     },
     // Left
     {
         glm::vec2(0, 1),
         glm::vec2(1, 1),
         glm::vec2(1, 0),
-        glm::vec2(0, 0)
+        glm::vec2(0, 0),
     },
     // Up
     {
         glm::vec2(0, 1),
         glm::vec2(0, 0),
         glm::vec2(1, 0),
-        glm::vec2(1, 1)
+        glm::vec2(1, 1),
     },
     // Down
     {
         glm::vec2(0, 1),
         glm::vec2(0, 0),
         glm::vec2(1, 0),
-        glm::vec2(1, 1)
-    }
+        glm::vec2(1, 1),
+    },
 }};
 
 const std::array<std::array<uint16_t, 6>, 6> cubeIndices = {{
@@ -187,7 +184,7 @@ const std::array<std::array<uint16_t, 6>, 6> cubeIndices = {{
     { 0, 2, 1, 0, 3, 2 }, // Right
     { 0, 1, 2, 0, 2, 3 }, // Left
     { 0, 1, 2, 0, 2, 3 }, // Up
-    { 0, 2, 1, 0, 3, 2 }  // Down
+    { 0, 2, 1, 0, 3, 2 }, // Down
 }};
 
 const std::array<std::array<int32_t, 3>, 6> directions = {{
@@ -196,7 +193,7 @@ const std::array<std::array<int32_t, 3>, 6> directions = {{
     {  1,  0,  0 }, // Right
     { -1,  0,  0 }, // Left
     {  0,  1,  0 }, // Up
-    {  0, -1,  0 }  // Down
+    {  0, -1,  0 }, // Down
 }};
 
 class App {
@@ -246,7 +243,7 @@ public:
                     voxelVertices.push_back(VertexData {
                         vertex + glm::vec3(x, y, z),
                         glm::vec3(1.0, 1.0, 1.0),
-                        uv
+                        glm::vec3(uv.x, uv.y, voxel - 1),
                     });
                 }
             }
@@ -259,9 +256,9 @@ public:
         vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
         vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
 
-        textureImage = Image::createTexture("res/testImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        textureImage = Image::createTextureArray("res/cubesImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device, 16, 16, 4);
         textureImageView = textureImage.createTextureView(vulkanState.device);
-        textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
+        textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST);
 
         generateVoxelMesh();
         voxelModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);

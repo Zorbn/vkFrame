@@ -121,7 +121,7 @@ public:
         vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
         vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
 
-        textureImage = Image::createTexture("res/testImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        textureImage = Image::createTexture("res/updateImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
         textureImageView = textureImage.createTextureView(vulkanState.device);
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
