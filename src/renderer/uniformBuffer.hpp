@@ -5,8 +5,7 @@
 
 #include "buffer.hpp"
 
-template <typename T>
-class UniformBuffer {
+template <typename T> class UniformBuffer {
 public:
     void create(const uint32_t maxFramesInFlight, VmaAllocator allocator) {
         VkDeviceSize bufferByteSize = sizeof(T);

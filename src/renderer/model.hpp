@@ -5,8 +5,7 @@
 #include "buffer.hpp"
 #include "vertex.hpp"
 
-template <typename T>
-class Model {
+template <typename T> class Model {
 public:
     static Model<T> fromVerticesAndIndices(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
         Model model;
@@ -29,7 +28,7 @@ public:
         model.indexBuffer = Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, maxIndices);
         model.vertexBuffer = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, maxVertices);
 
-        size_t instanceByteSize = maxInstances * sizeof(CustomInstanceData);
+        size_t instanceByteSize = maxInstances * sizeof(T);
         model.instanceStagingBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
         model.instanceBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
 

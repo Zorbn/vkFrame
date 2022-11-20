@@ -1,6 +1,4 @@
-#include "renderer.hpp"
-
-// TODO: Get rid of instanceData and customInstanceData
+#include "renderer/renderer.hpp"
 
 const std::vector<Vertex> testVertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
@@ -29,6 +27,31 @@ const std::vector<uint16_t> testIndices2 = {
     0, 1, 2
 };
 
+struct InstanceData {
+public:
+    glm::vec3 pos;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 1;
+        bindingDescription.stride = sizeof(InstanceData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 1;
+        attributeDescriptions[0].location = 3;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = 0;
+
+        return attributeDescriptions;
+    }
+};
+
 struct UniformBufferData {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
@@ -45,7 +68,7 @@ public:
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<CustomInstanceData> updateTestModel;
+    Model<InstanceData> updateTestModel;
 
     uint32_t frameCount = 0;
 
@@ -59,7 +82,7 @@ public:
         textureImageView = textureImage.createTextureView(vulkanState.device);
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        updateTestModel = Model<InstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
         ubo.create(maxFramesInFlight, vulkanState.allocator);
 
         renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
@@ -114,7 +137,7 @@ public:
 
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", vulkanState.device, renderPass);
+        pipeline.create<InstanceData>("res/shader.vert.spv", "res/shader.frag.spv", vulkanState.device, renderPass);
     }
 
     void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
@@ -136,7 +159,7 @@ public:
 
         ubo.update(uboData);
 
-        std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
+        std::vector<InstanceData> instances = {InstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
         updateTestModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
         updateTestModel.draw(commandBuffer);
 

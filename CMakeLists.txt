@@ -3,7 +3,8 @@ include(CheckCCompilerFlag)
 
 cmake_minimum_required(VERSION 3.17)
 
-project(gFps)
+project(vk_cubes)
+set(TARGET_NAME vk_cubes)
 
 find_package(Vulkan REQUIRED)
 
@@ -32,33 +33,32 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw glm vk_mem_alloc vk_bootstrap)
 
 add_executable(
-        game
-        deps/stb_image.h
+        ${TARGET_NAME}
         src/main.cpp
-        src/renderer.cpp src/renderer.hpp
-        src/buffer.cpp src/buffer.hpp
-        src/commands.cpp src/commands.hpp
-        src/vertex.cpp src/vertex.hpp
-        src/instanceData.cpp src/instanceData.hpp
-        src/swapchain.cpp src/swapchain.hpp
-        src/image.cpp src/image.hpp
-        src/pipeline.cpp src/pipeline.hpp
-        src/renderPass.cpp src/renderPass.hpp
-        src/uniformBuffer.hpp
-        src/model.hpp
-        src/queueFamilyIndices.hpp
-        src/customInstanceData.hpp
-        src/headerImpls.cpp
+        src/renderer/renderer.cpp src/renderer/renderer.hpp
+        src/renderer/buffer.cpp src/renderer/buffer.hpp
+        src/renderer/commands.cpp src/renderer/commands.hpp
+        src/renderer/vertex.cpp src/renderer/vertex.hpp
+        src/renderer/swapchain.cpp src/renderer/swapchain.hpp
+        src/renderer/image.cpp src/renderer/image.hpp
+        src/renderer/pipeline.cpp src/renderer/pipeline.hpp
+        src/renderer/renderPass.cpp src/renderer/renderPass.hpp
+        src/renderer/uniformBuffer.hpp
+        src/renderer/model.hpp
+        src/renderer/queueFamilyIndices.hpp
+        src/renderer/headerImpls.cpp
 )
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
 
 if (HAVE_NULL_COMPLETENESS)
-        target_compile_options(game PRIVATE -Wno-nullability-completeness)
+        target_compile_options(${TARGET_NAME} PRIVATE -Wno-nullability-completeness)
 endif (HAVE_NULL_COMPLETENESS)
 
+target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps)
+
 target_link_libraries(
-        game
+        ${TARGET_NAME}
         glm
         glfw
         vk-bootstrap::vk-bootstrap
@@ -67,7 +67,7 @@ target_link_libraries(
 )
 
 add_custom_command(
-        TARGET game
+        TARGET ${TARGET_NAME}
         POST_BUILD
         COMMAND
         ${CMAKE_COMMAND} -E copy_directory

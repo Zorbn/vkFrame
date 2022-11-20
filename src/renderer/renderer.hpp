@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "../deps/stb_image.h"
+#include <stb_image.h>
 
 #include <vk_mem_alloc.h>
 
@@ -32,8 +32,6 @@
 #include "commands.hpp"
 #include "queueFamilyIndices.hpp"
 #include "model.hpp"
-#include "instanceData.hpp"
-#include "customInstanceData.hpp"
 #include "swapchain.hpp"
 #include "pipeline.hpp"
 #include "uniformBuffer.hpp"
