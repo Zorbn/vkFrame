@@ -6,7 +6,7 @@
 #include "buffer.hpp"
 
 template <typename T>
-struct UniformBuffer {
+class UniformBuffer {
 public:
     void create(const uint32_t maxFramesInFlight, VmaAllocator allocator) {
         VkDeviceSize bufferByteSize = sizeof(T);
@@ -15,9 +15,8 @@ public:
         buffersMapped.resize(maxFramesInFlight);
 
         for (size_t i = 0; i < maxFramesInFlight; i++) {
-            buffers[i] = Buffer::create(allocator, bufferByteSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true);
-
-            vmaMapMemory(allocator, buffers[i].allocation, &buffersMapped[i]);
+            buffers[i] = Buffer(allocator, bufferByteSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true);
+            buffers[i].map(allocator, &buffersMapped[i]);
         }
     }
 
@@ -28,8 +27,8 @@ public:
         }
     }
 
-    VkBuffer getBuffer(uint32_t i) {
-        return buffers[i].buffer;
+    const VkBuffer& getBuffer(uint32_t i) {
+        return buffers[i].getBuffer();
     }
 
     size_t getDataSize() {
@@ -39,7 +38,7 @@ public:
     void destroy(VmaAllocator allocator) {
         size_t bufferCount = buffers.size();
         for (size_t i = 0; i < bufferCount; i++) {
-            vmaUnmapMemory(allocator, buffers[i].allocation);
+            buffers[i].unmap(allocator);
             buffers[i].destroy(allocator);
         }
     }

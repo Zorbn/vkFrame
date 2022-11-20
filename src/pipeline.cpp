@@ -134,7 +134,7 @@ void Pipeline::createPipeline(const std::string& vertShader, const std::string& 
 
 void Pipeline::createRenderPass(Swapchain& swapchain, VkPhysicalDevice physicalDevice, VkDevice device, bool enableDepth) {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapchain.imageFormat;
+    colorAttachment.format = swapchain.getImageFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -255,9 +255,9 @@ void Pipeline::beginPass(const uint32_t imageIndex, const uint32_t currentFrame,
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = swapchain.framebuffers[imageIndex];
+    renderPassInfo.framebuffer = swapchain.getFramebuffer(imageIndex);
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchain.extent;
+    renderPassInfo.renderArea.extent = swapchain.getExtent();
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{clearColorR, clearColorG, clearColorB, clearColorA}};
@@ -269,6 +269,22 @@ void Pipeline::beginPass(const uint32_t imageIndex, const uint32_t currentFrame,
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     bind(commandBuffer, currentFrame);
+
+    const VkExtent2D& extent = swapchain.getExtent();
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = extent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void Pipeline::endPass(VkCommandBuffer commandBuffer) {
@@ -321,4 +337,5 @@ void Pipeline::cleanup(VkDevice device) {
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 }

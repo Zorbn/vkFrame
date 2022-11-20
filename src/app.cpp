@@ -101,7 +101,7 @@ void App::initVulkan() {
     commands.createPool(physicalDevice, device, surface);
     commands.createBuffers(device, MAX_FRAMES_IN_FLIGHT);
 
-    textureImage = Image::createTextureImage("res/testImg.png", allocator, commands, graphicsQueue, device);
+    textureImage = Image::createTexture("res/testImg.png", allocator, commands, graphicsQueue, device);
     textureImageView = textureImage.createTextureView(device);
     textureSampler = textureImage.createTextureSampler(physicalDevice, device);
 
@@ -221,8 +221,6 @@ void App::cleanup() {
     vkDestroySampler(device, textureSampler, nullptr);
     vkDestroyImageView(device, textureImageView, nullptr);
     textureImage.destroy(allocator);
-
-    vkDestroyDescriptorSetLayout(device, pipeline.descriptorSetLayout, nullptr);
 
     updateTestModel.destroy(allocator);
 
@@ -424,7 +422,7 @@ void App::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device, swapchain.swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = swapchain.getNextImage(device, imageAvailableSemaphores[currentFrame], imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         waitWhileMinimized();
@@ -440,7 +438,7 @@ void App::drawFrame() {
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
     commands.resetBuffers(imageIndex, currentFrame);
-    VkCommandBuffer currentBuffer = commands.getBuffer(currentFrame);
+    const VkCommandBuffer& currentBuffer = commands.getBuffer(currentFrame);
     recordCommandBuffer(currentBuffer, imageIndex);
 
     VkSubmitInfo submitInfo{};
@@ -469,7 +467,7 @@ void App::drawFrame() {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = {swapchain.swapchain};
+    VkSwapchainKHR swapChains[] = {swapchain.getSwapchain()};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
 
@@ -499,27 +497,15 @@ void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
+    const VkExtent2D& extent = swapchain.getExtent();
+
     UniformBufferData uboData{};
     uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    uboData.proj = glm::perspective(glm::radians(45.0f), swapchain.extent.width / (float) swapchain.extent.height, 0.1f, 10.0f);
+    uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 10.0f);
     uboData.proj[1][1] *= -1;
 
     ubo.update(uboData);
-
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float) swapchain.extent.width;
-    viewport.height = (float) swapchain.extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = swapchain.extent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
     updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);

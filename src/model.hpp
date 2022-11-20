@@ -8,13 +8,6 @@
 template <typename T>
 class Model {
 public:
-    Buffer vertexBuffer;
-    Buffer indexBuffer;
-    Buffer instanceBuffer;
-    Buffer instanceStagingBuffer;
-    size_t size;
-    size_t instanceCount = 0;
-
     static Model<T> fromVerticesAndIndices(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
         Model model;
         model.size = indices.size();
@@ -37,8 +30,8 @@ public:
         model.vertexBuffer = Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, maxVertices);
 
         size_t instanceByteSize = maxInstances * sizeof(CustomInstanceData);
-        model.instanceStagingBuffer = Buffer::create(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
-        model.instanceBuffer = Buffer::create(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
+        model.instanceStagingBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+        model.instanceBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
 
         return model;
     }
@@ -47,9 +40,9 @@ public:
         if (instanceCount < 1) return;
 
         VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
-        vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer.buffer, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getBuffer(), offsets);
+        vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer.getBuffer(), offsets);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT16);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(size), instanceCount, 0, 0, 0);
     }
 
@@ -72,5 +65,15 @@ public:
     void destroy(VmaAllocator allocator) {
         vertexBuffer.destroy(allocator);
         indexBuffer.destroy(allocator);
+        instanceStagingBuffer.destroy(allocator);
+        instanceBuffer.destroy(allocator);
     }
+
+private:
+    Buffer vertexBuffer;
+    Buffer indexBuffer;
+    Buffer instanceBuffer;
+    Buffer instanceStagingBuffer;
+    size_t size;
+    size_t instanceCount = 0;
 };

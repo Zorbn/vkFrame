@@ -76,7 +76,7 @@ void Swapchain::create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfa
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, imagesVk.data());
 
     for (VkImage vkImage : imagesVk) {
-        images.push_back(Image{vkImage});
+        images.push_back(Image(vkImage));
     }
 
     imageFormat = surfaceFormat.format;
@@ -117,7 +117,7 @@ void Swapchain::createFramebuffers(VkDevice device, VkRenderPass renderPass) {
 void Swapchain::createDepthResources(VmaAllocator allocator, VkPhysicalDevice physicalDevice, VkDevice device) {
     VkFormat depthFormat = findDepthFormat(physicalDevice);
 
-    depthImage = Image::createImage(allocator, extent.width, extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    depthImage = Image(allocator, extent.width, extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     depthImageView = depthImage.createView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, device);
 }
 
@@ -199,4 +199,24 @@ SwapChainSupportDetails Swapchain::querySupport(VkPhysicalDevice device, VkSurfa
     }
 
     return details;
+}
+
+VkResult Swapchain::getNextImage(VkDevice device, VkSemaphore semaphore, uint32_t& imageIndex) {
+    return vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex);
+}
+
+const VkSwapchainKHR& Swapchain::getSwapchain() {
+    return swapchain;
+}
+
+const VkExtent2D& Swapchain::getExtent() {
+    return extent;
+}
+
+const VkFormat& Swapchain::getImageFormat() {
+    return imageFormat;
+}
+
+const VkFramebuffer& Swapchain::getFramebuffer(const uint32_t imageIndex) {
+    return framebuffers[imageIndex];
 }

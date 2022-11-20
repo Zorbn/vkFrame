@@ -18,16 +18,6 @@ struct SwapChainSupportDetails {
 
 class Swapchain {
 public:
-    VkSwapchainKHR swapchain;
-    std::vector<Image> images;
-    VkFormat imageFormat;
-    VkExtent2D extent;
-    std::vector<VkImageView> imageViews;
-    std::vector<VkFramebuffer> framebuffers;
-
-    Image depthImage;
-    VkImageView depthImageView;
-
     void create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight);
     void cleanup(VmaAllocator allocator, VkDevice device);
     void recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkRenderPass renderPass, int32_t windowWidth, int32_t windowHeight);
@@ -43,4 +33,22 @@ public:
     VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, int32_t windowWidth, int32_t windowHeight);
     SwapChainSupportDetails querySupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+
+    VkResult getNextImage(VkDevice device, VkSemaphore semaphore, uint32_t& imageIndex);
+
+    const VkSwapchainKHR& getSwapchain();
+    const VkExtent2D& getExtent();
+    const VkFormat& getImageFormat();
+    const VkFramebuffer& getFramebuffer(const uint32_t imageIndex);
+
+private:
+    VkSwapchainKHR swapchain;
+    std::vector<Image> images;
+    VkFormat imageFormat;
+    VkExtent2D extent;
+    std::vector<VkImageView> imageViews;
+    std::vector<VkFramebuffer> framebuffers;
+
+    Image depthImage;
+    VkImageView depthImageView;
 };

@@ -50,8 +50,6 @@ class App {
 public:
     void run();
 
-    VmaAllocator allocator;
-
 private:
     GLFWwindow* window;
 
@@ -77,6 +75,8 @@ private:
     uint32_t currentFrame = 0;
 
     uint32_t frameCount = 0;
+
+    VmaAllocator allocator;
 
     Commands commands;
     Swapchain swapchain;

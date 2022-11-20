@@ -64,7 +64,7 @@ void Commands::resetBuffers(const uint32_t imageIndex, const uint32_t currentFra
     vkResetCommandBuffer(buffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
 }
 
-VkCommandBuffer Commands::getBuffer(const uint32_t currentFrame) {
+const VkCommandBuffer& Commands::getBuffer(const uint32_t currentFrame) {
     return buffers[currentFrame];
 }
 
