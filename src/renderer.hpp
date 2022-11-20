@@ -19,12 +19,13 @@
 #include <vector>
 #include <cstring>
 #include <cstdlib>
-#include <cstdint>
+#include <cinttypes>
 #include <limits>
 #include <array>
 #include <optional>
 #include <set>
 #include <algorithm>
+#include <functional>
 
 #include "buffer.hpp"
 #include "vertex.hpp"
@@ -48,7 +49,13 @@ struct UniformBufferData {
 
 class Renderer {
 public:
-    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight);
+    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
+        VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
+        Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback,
+        std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
+        std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+        std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);
 
 private:
     GLFWwindow* window;
@@ -63,25 +70,16 @@ private:
     VkQueue graphicsQueue;
     VkQueue presentQueue;
 
-    Image textureImage;
-    VkImageView textureImageView;
-    VkSampler textureSampler;
-
-    Model<CustomInstanceData> updateTestModel;
-
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
-
-    uint32_t frameCount = 0;
 
     VmaAllocator allocator;
 
     Commands commands;
     Swapchain swapchain;
     Pipeline pipeline;
-    UniformBuffer<UniformBufferData> ubo;
 
     bool framebufferResized = false;
 
@@ -89,15 +87,22 @@ private:
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-    void initVulkan();
+    void initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
+        uint32_t width, uint32_t height,uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
 
-    void mainLoop();
+    void mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback);
+    void drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, std::function<void(VkDevice device, VkCommandBuffer commandBuffer,
+        VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex,
+        const uint32_t currentFrame)> renderCallback);
     void waitWhileMinimized();
 
-    void cleanup();
+    void cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback);
 
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     void setupDebugMessenger();
@@ -113,9 +118,6 @@ private:
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     void createSyncObjects();
-
-    void drawFrame();
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);

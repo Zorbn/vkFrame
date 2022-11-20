@@ -32,38 +32,18 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-const std::vector<Vertex> testVertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, std::function<void(VkPhysicalDevice physicalDevice,
+    VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator, uint32_t width, uint32_t height, uint32_t maxFramesInFlight,
+    Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback,
+    std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+    Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback,
+    std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback,
+    std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
 
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> testIndices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-
-const std::vector<Vertex> testVertices2 = {
-    {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> testIndices2 = {
-    0, 1, 2
-};
-
-void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight) {
     initWindow(windowTitle, windowWidth, windowHeight);
-    initVulkan();
-    mainLoop();
-    cleanup();
+    initVulkan(initCallback);
+    mainLoop(renderCallback, updateCallback);
+    cleanup(cleanupCallback);
 }
 
 void Renderer::initWindow(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight) {
@@ -81,7 +61,9 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int heig
     app->framebufferResized = true;
 }
 
-void Renderer::initVulkan() {
+void Renderer::initVulkan(std::function<void(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, VkQueue graphicsQueue, VmaAllocator allocator,
+        uint32_t width, uint32_t height, uint32_t maxFramesInFlight, Swapchain& swapchain, Commands& commands, Pipeline&)> initCallback) {
+
     createInstance();
     setupDebugMessenger();
     createSurface();
@@ -92,73 +74,8 @@ void Renderer::initVulkan() {
     int32_t width;
     int32_t height;
     glfwGetFramebufferSize(window, &width, &height);
-    swapchain.create(device, physicalDevice, surface, width, height);
-    swapchain.createImageViews(device);
 
-    commands.createPool(physicalDevice, device, surface);
-    commands.createBuffers(device, MAX_FRAMES_IN_FLIGHT);
-
-    textureImage = Image::createTexture("res/testImg.png", allocator, commands, graphicsQueue, device);
-    textureImageView = textureImage.createTextureView(device);
-    textureSampler = textureImage.createTextureSampler(physicalDevice, device);
-
-    updateTestModel = Model<CustomInstanceData>::fromVerticesAndIndicesModifiable(testVertices2, testIndices2, 8, 12, 4, allocator, commands, graphicsQueue, device);
-    ubo.create(MAX_FRAMES_IN_FLIGHT, allocator);
-
-    pipeline.createDescriptorSetLayout(device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = 0;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.pImmutableSamplers = nullptr;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 1;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        bindings.push_back(uboLayoutBinding);
-        bindings.push_back(samplerLayoutBinding);
-    });
-    pipeline.createDescriptorPool(MAX_FRAMES_IN_FLIGHT, device);
-    pipeline.createDescriptorSets(MAX_FRAMES_IN_FLIGHT, device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = ubo.getBuffer(i);
-        bufferInfo.offset = 0;
-        bufferInfo.range = ubo.getDataSize();
-
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = textureImageView;
-        imageInfo.sampler = textureSampler;
-
-        descriptorWrites.resize(2);
-
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSet;
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSet;
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
-
-        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    });
-    pipeline.create("res/shader.vert.spv", "res/shader.frag.spv", true, swapchain, physicalDevice, device);
-
-    swapchain.createDepthResources(allocator, physicalDevice, device);
-    swapchain.createFramebuffers(device, pipeline.renderPass);
+    initCallback(physicalDevice, device, surface, graphicsQueue, allocator, width, height, MAX_FRAMES_IN_FLIGHT, swapchain, commands, pipeline);
 
     createSyncObjects();
 }
@@ -179,21 +96,12 @@ void Renderer::createAllocator() {
     vmaCreateAllocator(&aci, &allocator);
 }
 
-void Renderer::mainLoop() {
+void Renderer::mainLoop(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback, std::function<void(VkDevice device, VkQueue graphicsQueue, VmaAllocator allocator, Commands& commands)> updateCallback) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
-        uint32_t animFrame = frameCount / 3000;
-        if (frameCount % 3000 == 0) {
-            if (animFrame % 2 == 0) {
-                updateTestModel.update(testVertices2, testIndices2, commands, allocator, graphicsQueue, device);
-            } else {
-                updateTestModel.update(testVertices, testIndices, commands, allocator, graphicsQueue, device);
-            }
-        }
-
-        drawFrame();
-        frameCount++;
+        updateCallback(device, graphicsQueue, allocator, commands);
+        drawFrame(renderCallback);
     }
 
     vkDeviceWaitIdle(device);
@@ -209,17 +117,11 @@ void Renderer::waitWhileMinimized() {
     }
 }
 
-void Renderer::cleanup() {
+void Renderer::cleanup(std::function<void(VkDevice device, VmaAllocator allocator)> cleanupCallback) {
     swapchain.cleanup(allocator, device);
     pipeline.cleanup(device);
 
-    ubo.destroy(allocator);
-
-    vkDestroySampler(device, textureSampler, nullptr);
-    vkDestroyImageView(device, textureImageView, nullptr);
-    textureImage.destroy(allocator);
-
-    updateTestModel.destroy(allocator);
+    cleanupCallback(device, allocator);
 
     vmaDestroyAllocator(allocator);
 
@@ -415,7 +317,8 @@ void Renderer::createSyncObjects() {
     }
 }
 
-void Renderer::drawFrame() {
+void Renderer::drawFrame(std::function<void(VkDevice device, VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain,
+        Commands& commands, const uint32_t imageIndex, const uint32_t currentFrame)> renderCallback) {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -436,7 +339,7 @@ void Renderer::drawFrame() {
 
     commands.resetBuffers(imageIndex, currentFrame);
     const VkCommandBuffer& currentBuffer = commands.getBuffer(currentFrame);
-    recordCommandBuffer(currentBuffer, imageIndex);
+    recordCommandBuffer(currentBuffer, imageIndex, renderCallback);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -486,29 +389,10 @@ void Renderer::drawFrame() {
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-    pipeline.beginPass(imageIndex, currentFrame, commandBuffer, swapchain, 0.0f, 0.0f, 0.0f, 1.0f);
-
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    const VkExtent2D& extent = swapchain.getExtent();
-
-    UniformBufferData uboData{};
-    uboData.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    uboData.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 10.0f);
-    uboData.proj[1][1] *= -1;
-
-    ubo.update(uboData);
-
-    std::vector<CustomInstanceData> instances = {CustomInstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, CustomInstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
-    updateTestModel.updateInstances(instances, commands, allocator, graphicsQueue, device);
-    updateTestModel.draw(commandBuffer);
-
-    pipeline.endPass(commandBuffer);
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, std::function<void(VkDevice device, VkCommandBuffer commandBuffer,
+    VkQueue graphicsQueue, VmaAllocator allocator, Pipeline& pipeline, Swapchain& swapchain, Commands& commands, const uint32_t imageIndex,
+    const uint32_t currentFrame)> renderCallback) {
+    renderCallback(device, commandBuffer, graphicsQueue, allocator, pipeline, swapchain, commands, imageIndex, currentFrame);
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
