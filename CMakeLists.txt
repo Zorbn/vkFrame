@@ -35,7 +35,7 @@ add_executable(
         game
         deps/stb_image.h
         src/main.cpp
-        src/app.cpp src/app.hpp
+        src/renderer.cpp src/renderer.hpp
         src/buffer.cpp src/buffer.hpp
         src/commands.cpp src/commands.hpp
         src/vertex.cpp src/vertex.hpp
@@ -47,6 +47,7 @@ add_executable(
         src/model.hpp
         src/queueFamilyIndices.hpp
         src/customInstanceData.hpp
+        src/headerImpls.cpp
 )
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)

@@ -1,7 +1,4 @@
-#include "app.hpp"
-
-const uint32_t WIDTH = 640;
-const uint32_t HEIGHT = 480;
+#include "renderer.hpp"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -62,29 +59,29 @@ const std::vector<uint16_t> testIndices2 = {
     0, 1, 2
 };
 
-void App::run() {
-    initWindow();
+void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight) {
+    initWindow(windowTitle, windowWidth, windowHeight);
     initVulkan();
     mainLoop();
     cleanup();
 }
 
-void App::initWindow() {
+void Renderer::initWindow(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight) {
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+    window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), nullptr, nullptr);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
-void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<App*>(glfwGetWindowUserPointer(window));
+void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
 }
 
-void App::initVulkan() {
+void Renderer::initVulkan() {
     createInstance();
     setupDebugMessenger();
     createSurface();
@@ -166,7 +163,7 @@ void App::initVulkan() {
     createSyncObjects();
 }
 
-void App::createAllocator() {
+void Renderer::createAllocator() {
     VmaVulkanFunctions vkFuncs = {};
 
     vkFuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -182,7 +179,7 @@ void App::createAllocator() {
     vmaCreateAllocator(&aci, &allocator);
 }
 
-void App::mainLoop() {
+void Renderer::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -202,7 +199,7 @@ void App::mainLoop() {
     vkDeviceWaitIdle(device);
 }
 
-void App::waitWhileMinimized() {
+void Renderer::waitWhileMinimized() {
     int32_t width = 0;
     int32_t height = 0;
     glfwGetFramebufferSize(window, &width, &height);
@@ -212,7 +209,7 @@ void App::waitWhileMinimized() {
     }
 }
 
-void App::cleanup() {
+void Renderer::cleanup() {
     swapchain.cleanup(allocator, device);
     pipeline.cleanup(device);
 
@@ -248,7 +245,7 @@ void App::cleanup() {
     glfwTerminate();
 }
 
-void App::createInstance() {
+void Renderer::createInstance() {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("Validation layers requested, but not available!");
     }
@@ -287,7 +284,7 @@ void App::createInstance() {
     }
 }
 
-void App::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void Renderer::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -295,7 +292,7 @@ void App::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& c
     createInfo.pfnUserCallback = debugCallback;
 }
 
-void App::setupDebugMessenger() {
+void Renderer::setupDebugMessenger() {
     if (!enableValidationLayers) return;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
@@ -306,13 +303,13 @@ void App::setupDebugMessenger() {
     }
 }
 
-void App::createSurface() {
+void Renderer::createSurface() {
     if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
 }
 
-void App::pickPhysicalDevice() {
+void Renderer::pickPhysicalDevice() {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -335,7 +332,7 @@ void App::pickPhysicalDevice() {
     }
 }
 
-void App::createLogicalDevice() {
+void Renderer::createLogicalDevice() {
     QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(physicalDevice, surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -380,11 +377,11 @@ void App::createLogicalDevice() {
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
-bool App::hasStencilComponent(VkFormat format) {
+bool Renderer::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-uint32_t App::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
@@ -397,7 +394,7 @@ uint32_t App::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properti
     throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-void App::createSyncObjects() {
+void Renderer::createSyncObjects() {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -418,7 +415,7 @@ void App::createSyncObjects() {
     }
 }
 
-void App::drawFrame() {
+void Renderer::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -489,7 +486,7 @@ void App::drawFrame() {
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     pipeline.beginPass(imageIndex, currentFrame, commandBuffer, swapchain, 0.0f, 0.0f, 0.0f, 1.0f);
 
     static auto startTime = std::chrono::high_resolution_clock::now();
@@ -514,7 +511,7 @@ void App::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex
     pipeline.endPass(commandBuffer);
 }
 
-bool App::isDeviceSuitable(VkPhysicalDevice device) {
+bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
     QueueFamilyIndices indices = QueueFamilyIndices::findQueueFamilies(device, surface);
 
     bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -531,7 +528,7 @@ bool App::isDeviceSuitable(VkPhysicalDevice device) {
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-bool App::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -547,7 +544,7 @@ bool App::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     return requiredExtensions.empty();
 }
 
-std::vector<const char*> App::getRequiredExtensions() {
+std::vector<const char*> Renderer::getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -561,7 +558,7 @@ std::vector<const char*> App::getRequiredExtensions() {
     return extensions;
 }
 
-bool App::checkValidationLayerSupport() {
+bool Renderer::checkValidationLayerSupport() {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -586,7 +583,7 @@ bool App::checkValidationLayerSupport() {
     return true;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL App::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL Renderer::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
 
     return VK_FALSE;

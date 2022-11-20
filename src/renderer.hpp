@@ -46,9 +46,9 @@ struct UniformBufferData {
     alignas(16) glm::mat4 proj;
 };
 
-class App {
+class Renderer {
 public:
-    void run();
+    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight);
 
 private:
     GLFWwindow* window;
@@ -85,7 +85,7 @@ private:
 
     bool framebufferResized = false;
 
-    void initWindow();
+    void initWindow(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight);
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 

@@ -1,18 +1,10 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include "../deps/stb_image.h"
-#undef STB_IMAGE_IMPLEMENTATION
-
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-#undef VMA_IMPLEMENTATION
-
-#include "app.hpp"
+#include "renderer.hpp"
 
 int main() {
-    App app;
+    Renderer renderer;
 
     try {
-        app.run();
+        renderer.run("Hello World", 640, 480);
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
