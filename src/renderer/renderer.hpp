@@ -28,7 +28,6 @@
 #include <functional>
 
 #include "buffer.hpp"
-#include "vertex.hpp"
 #include "commands.hpp"
 #include "queueFamilyIndices.hpp"
 #include "model.hpp"

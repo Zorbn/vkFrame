@@ -32,10 +32,6 @@ void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice dev
     commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
-Buffer Buffer::fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices) {
-    return Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, vertices.size());
-}
-
 Buffer Buffer::fromIndices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<uint16_t>& indices) {
     return Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices, indices.size());
 }
@@ -52,20 +48,6 @@ Buffer Buffer::fromIndicesWithMax(VmaAllocator allocator, Commands& commands, Vk
     stagingBuffer.destroy(allocator);
 
     return indexBuffer;
-}
-
-Buffer Buffer::fromVerticesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices, const size_t maxVertices) {
-    VkDeviceSize bufferByteSize = sizeof(vertices[0]) * maxVertices;
-
-    Buffer stagingBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
-    stagingBuffer.setData(vertices.data());
-
-    Buffer vertexBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
-
-    stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, vertexBuffer);
-    stagingBuffer.destroy(allocator);
-
-    return vertexBuffer;
 }
 
 const VkBuffer& Buffer::getBuffer() {

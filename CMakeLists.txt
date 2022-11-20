@@ -33,7 +33,6 @@ add_library(
         src/renderer/renderer.cpp src/renderer/renderer.hpp
         src/renderer/buffer.cpp src/renderer/buffer.hpp
         src/renderer/commands.cpp src/renderer/commands.hpp
-        src/renderer/vertex.cpp src/renderer/vertex.hpp
         src/renderer/swapchain.cpp src/renderer/swapchain.hpp
         src/renderer/image.cpp src/renderer/image.hpp
         src/renderer/pipeline.cpp src/renderer/pipeline.hpp

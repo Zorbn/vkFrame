@@ -7,9 +7,69 @@
 
 // TODO:
 // Texture arrays,
-// Requires Vertex with 3d UV, make vertex types up to the user.
 
-const std::array<int32_t, 4 * 4 * 4> voxelData = {
+struct VertexData {
+    glm::vec3 pos;
+    glm::vec3 color;
+    glm::vec2 texCoord;
+
+    static VkVertexInputBindingDescription VertexData::getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(VertexData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 3> VertexData::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(VertexData, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(VertexData, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(VertexData, texCoord);
+
+        return attributeDescriptions;
+    }
+};
+
+struct InstanceData {
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 1;
+        bindingDescription.stride = sizeof(InstanceData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+        return bindingDescription;
+    }
+
+    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
+
+        return attributeDescriptions;
+    }
+};
+
+struct UniformBufferData {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+};
+
+const int32_t mapSize = 4;
+
+const std::array<int32_t, mapSize * mapSize * mapSize> voxelData = {
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
@@ -131,36 +191,13 @@ const std::array<std::array<uint16_t, 6>, 6> cubeIndices = {{
 }};
 
 const std::array<std::array<int32_t, 3>, 6> directions = {{
-    { 0, 0, -1 },
-    { 0, 0, 1 },
-    { 1, 0, 0 },
-    { -1, 0, 0 },
-    { 0, 1, 0 },
-    { 0, -1, 0 }
+    {  0,  0, -1 }, // Forward
+    {  0,  0,  1 }, // Backward
+    {  1,  0,  0 }, // Right
+    { -1,  0,  0 }, // Left
+    {  0,  1,  0 }, // Up
+    {  0, -1,  0 }  // Down
 }};
-
-struct InstanceData {
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 1;
-        bindingDescription.stride = sizeof(InstanceData);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-
-        return bindingDescription;
-    }
-
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
-
-        return attributeDescriptions;
-    }
-};
-
-struct UniformBufferData {
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 proj;
-};
 
 class App {
 private:
@@ -172,24 +209,24 @@ private:
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<InstanceData> voxelModel;
+    Model<VertexData, InstanceData> voxelModel;
 
-    std::vector<Vertex> voxelVertices;
+    std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
 
 public:
     int32_t getVoxel(size_t x, size_t y, size_t z) {
-        if (x < 0 || x >= 4 || y < 0 || y >= 4 || z < 0 || z >= 4) {
+        if (x < 0 || x >= mapSize || y < 0 || y >= mapSize || z < 0 || z >= mapSize) {
             return 0;
         }
 
-        return voxelData[x + y * 4 + z * 4 * 4];
+        return voxelData[x + y * mapSize + z * mapSize * mapSize];
     }
 
     void generateVoxelMesh() {
-        for (size_t x = 0; x < 4; x++)
-        for (size_t y = 0; y < 4; y++)
-        for (size_t z = 0; z < 4; z++) {
+        for (size_t x = 0; x < mapSize; x++)
+        for (size_t y = 0; y < mapSize; y++)
+        for (size_t z = 0; z < mapSize; z++) {
             int32_t voxel = getVoxel(x, y, z);
 
             if (voxel == 0) continue;
@@ -206,7 +243,7 @@ public:
                     glm::vec3 vertex = cubeVertices[face][i];
                     glm::vec2 uv = cubeUvs[face][i];
 
-                    voxelVertices.push_back(Vertex {
+                    voxelVertices.push_back(VertexData {
                         vertex + glm::vec3(x, y, z),
                         glm::vec3(1.0, 1.0, 1.0),
                         uv
@@ -227,10 +264,20 @@ public:
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
         generateVoxelMesh();
-        voxelModel = Model<InstanceData>::fromVerticesAndIndices(voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        voxelModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{}};
         voxelModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
+
+        const VkExtent2D& extent = vulkanState.swapchain.getExtent();
         ubo.create(maxFramesInFlight, vulkanState.allocator);
+
+        UniformBufferData uboData{};
+        uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
+        uboData.proj[1][1] *= -1;
+
+        ubo.update(uboData);
 
         renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
 
@@ -284,7 +331,7 @@ public:
 
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create<InstanceData>("res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass);
+        pipeline.create<VertexData, InstanceData>("res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass);
     }
 
     void update(VulkanState& vulkanState) {
@@ -295,14 +342,6 @@ public:
 
         renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
         pipeline.bind(commandBuffer, currentFrame);
-
-        UniformBufferData uboData{};
-        uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
-        uboData.proj[1][1] *= -1;
-
-        ubo.update(uboData);
 
         voxelModel.draw(commandBuffer);
 

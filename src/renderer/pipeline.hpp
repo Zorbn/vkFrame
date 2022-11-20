@@ -8,13 +8,12 @@
 #include <fstream>
 #include <functional>
 
-#include "vertex.hpp"
 #include "swapchain.hpp"
 #include "renderPass.hpp"
 
 class Pipeline {
 public:
-    template <typename T> void create(const std::string& vertShader, const std::string& fragShader, VkDevice device, RenderPass& renderPass) {
+    template <typename V, typename I> void create(const std::string& vertShader, const std::string& fragShader, VkDevice device, RenderPass& renderPass) {
         auto vertShaderCode = readFile(vertShader);
         auto fragShaderCode = readFile(fragShader);
 
@@ -38,9 +37,9 @@ public:
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { Vertex::getBindingDescription(), T::getBindingDescription() };
-        auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
-        auto instanceAttributeDescriptions = T::getAttributeDescriptions();
+        std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { V::getBindingDescription(), I::getBindingDescription() };
+        auto vertexAttributeDescriptions = V::getAttributeDescriptions();
+        auto instanceAttributeDescriptions = I::getAttributeDescriptions();
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
         attributeDescriptions.reserve(vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size());
 

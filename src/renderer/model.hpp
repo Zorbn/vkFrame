@@ -2,19 +2,16 @@
 
 #include <cinttypes>
 
-#include "buffer.hpp"
-#include "vertex.hpp"
-
-template <typename T> class Model {
+template <typename V, typename I> class Model {
 public:
-    static Model<T> fromVerticesAndIndices(const std::vector<Vertex>& vertices, const std::vector<uint16_t> indices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
+    static Model<V, I> fromVerticesAndIndices(const std::vector<V>& vertices, const std::vector<uint16_t> indices, const size_t maxInstances, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
         Model model;
         model.size = indices.size();
 
         model.indexBuffer = Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
         model.vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
 
-        size_t instanceByteSize = maxInstances * sizeof(T);
+        size_t instanceByteSize = maxInstances * sizeof(I);
         model.instanceStagingBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
         model.instanceBuffer = Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
 
@@ -31,7 +28,7 @@ public:
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(size), instanceCount, 0, 0, 0);
     }
 
-    void update(const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
+    void update(const std::vector<V>& vertices, const std::vector<uint16_t>& indices, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
         size = indices.size();
 
         vkDeviceWaitIdle(device);
@@ -41,7 +38,7 @@ public:
         vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
     }
 
-    void updateInstances(const std::vector<T>& instances, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
+    void updateInstances(const std::vector<I>& instances, Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
         instanceCount = instances.size();
         instanceStagingBuffer.setData(instances.data());
         instanceStagingBuffer.copyTo(allocator, graphicsQueue, device, commands, instanceBuffer);

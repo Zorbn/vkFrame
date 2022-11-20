@@ -5,31 +5,40 @@
  * Make a model that swaps between 2 meshes and has 3 instances.
  */
 
-const std::vector<Vertex> testVertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+struct VertexData {
+    glm::vec3 pos;
+    glm::vec3 color;
+    glm::vec2 texCoord;
 
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
+    static VkVertexInputBindingDescription VertexData::getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(VertexData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-const std::vector<uint16_t> testIndices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
+        return bindingDescription;
+    }
 
-const std::vector<Vertex> testVertices2 = {
-    {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}
-};
+    static std::array<VkVertexInputAttributeDescription, 3> VertexData::getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
-const std::vector<uint16_t> testIndices2 = {
-    0, 1, 2
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(VertexData, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(VertexData, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(VertexData, texCoord);
+
+        return attributeDescriptions;
+    }
 };
 
 struct InstanceData {
@@ -64,6 +73,33 @@ struct UniformBufferData {
     alignas(16) glm::mat4 proj;
 };
 
+const std::vector<VertexData> testVertices = {
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> testIndices = {
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
+};
+
+const std::vector<VertexData> testVertices2 = {
+    {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> testIndices2 = {
+    0, 1, 2
+};
+
 class App {
 private:
     Pipeline pipeline;
@@ -74,7 +110,7 @@ private:
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<InstanceData> updateTestModel;
+    Model<VertexData, InstanceData> updateTestModel;
 
     uint32_t frameCount = 0;
 
@@ -89,7 +125,7 @@ public:
         textureImageView = textureImage.createTextureView(vulkanState.device);
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<InstanceData>::fromVerticesAndIndices(testVertices2, testIndices2, 3, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        updateTestModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(testVertices2, testIndices2, 3, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{glm::vec3(1.0f, 0.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 1.0f, 0.0f)}, InstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
         updateTestModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
 
@@ -147,7 +183,7 @@ public:
 
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create<InstanceData>("res/updateShader.vert.spv", "res/updateShader.frag.spv", vulkanState.device, renderPass);
+        pipeline.create<VertexData, InstanceData>("res/updateShader.vert.spv", "res/updateShader.frag.spv", vulkanState.device, renderPass);
     }
 
     void update(VulkanState& vulkanState) {

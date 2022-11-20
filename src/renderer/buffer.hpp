@@ -5,16 +5,31 @@
 
 #include <vector>
 
-#include "vertex.hpp"
 #include "commands.hpp"
 #include "queueFamilyIndices.hpp"
 
 class Buffer {
 public:
     static Buffer fromIndices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<uint16_t>& indices);
-    static Buffer fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices);
     static Buffer fromIndicesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<uint16_t>& indices, const size_t maxIndices);
-    static Buffer fromVerticesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<Vertex>& vertices, const size_t maxVertices);
+
+    template <typename T> static Buffer fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<T>& vertices) {
+        return Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices, vertices.size());
+    }
+
+    template <typename T> static Buffer fromVerticesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, const std::vector<T>& vertices, const size_t maxVertices) {
+        VkDeviceSize bufferByteSize = sizeof(vertices[0]) * maxVertices;
+
+        Buffer stagingBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+        stagingBuffer.setData(vertices.data());
+
+        Buffer vertexBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
+
+        stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, vertexBuffer);
+        stagingBuffer.destroy(allocator);
+
+        return vertexBuffer;
+    }
 
     Buffer();
     Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags usage, bool cpuAccessable);
