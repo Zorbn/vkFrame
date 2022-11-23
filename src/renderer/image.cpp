@@ -6,7 +6,9 @@ Image::Image(VkImage image) : image(image) {}
 
 Image::Image(VkImage image, VmaAllocation allocation) : image(image), allocation(allocation) {}
 
-Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t layers) {
+Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+    VkMemoryPropertyFlags properties, uint32_t mipmapLevels, uint32_t layers) {
+
     layerCount = layers;
 
     VkImageCreateInfo imageInfo{};
@@ -15,7 +17,7 @@ Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat f
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
     imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
+    imageInfo.mipLevels = mipmapLevels;
     imageInfo.arrayLayers = layerCount;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
@@ -34,8 +36,95 @@ Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat f
         throw std::runtime_error("Failed to allocate image memory!");
     }
 
+    this->width = width;
+    this->height = height;
+    this->mipmapLevels = mipmapLevels;
     this->image = image;
     this->allocation = allocation;
+}
+
+void Image::generateMipmaps(Commands& commands, VkQueue graphicsQueue, VkDevice device) {
+    VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
+
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.image = image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = layerCount;
+    barrier.subresourceRange.levelCount = 1;
+
+    int32_t mipmapWidth = width;
+    int32_t mipmapHeight = height;
+
+    for (uint32_t i = 1; i < mipmapLevels; i++) {
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        VkImageBlit blit{};
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = { mipmapWidth, mipmapHeight, 1 };
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = layerCount;
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = { mipmapWidth > 1 ? mipmapWidth / 2 : 1, mipmapHeight > 1 ? mipmapHeight / 2 : 1, 1 };
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = layerCount;
+
+        vkCmdBlitImage(commandBuffer,
+            image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &blit,
+            VK_FILTER_LINEAR);
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
+        if (mipmapWidth > 1) {
+            mipmapWidth /= 2;
+        }
+
+        if (mipmapHeight > 1) {
+            mipmapHeight /= 2;
+        }
+    }
+
+    barrier.subresourceRange.baseMipLevel = mipmapLevels - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier);
+
+    commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
 Buffer Image::loadImage(const std::string& image, VmaAllocator allocator, int32_t& width, int32_t& height) {
@@ -56,32 +145,36 @@ Buffer Image::loadImage(const std::string& image, VmaAllocator allocator, int32_
     return stagingBuffer;
 }
 
-Image Image::createTexture(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device) {
+Image Image::createTexture(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, bool enableMipmaps) {
     int32_t texWidth, texHeight;
     Buffer stagingBuffer = loadImage(image, allocator, texWidth, texHeight);
+    uint32_t mipMapLevels = enableMipmaps ? calcMipmapLevels(texWidth, texHeight) : 1;
 
-    Image textureImage = Image(allocator, texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    Image textureImage = Image(allocator, texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mipMapLevels);
 
     textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
-    textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, graphicsQueue, device);
+    textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device);
 
     stagingBuffer.destroy(allocator);
+
+    textureImage.generateMipmaps(commands, graphicsQueue, device);
 
     return textureImage;
 }
 
-Image Image::createTextureArray(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t width, uint32_t height, uint32_t layers) {
+Image Image::createTextureArray(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, bool enableMipmaps, uint32_t width, uint32_t height, uint32_t layers) {
     int32_t texWidth, texHeight;
     Buffer stagingBuffer = loadImage(image, allocator, texWidth, texHeight);
+    uint32_t mipMapLevels = enableMipmaps ? calcMipmapLevels(width, height) : 1;
 
-    Image textureImage = Image(allocator, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, layers);
+    Image textureImage = Image(allocator, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mipMapLevels, layers);
 
     textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
-    textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device, width, height, texWidth, texHeight);
-    textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, graphicsQueue, device);
+    textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device, texWidth, texHeight);
 
     stagingBuffer.destroy(allocator);
+
+    textureImage.generateMipmaps(commands, graphicsQueue, device);
 
     return textureImage;
 }
@@ -108,6 +201,7 @@ VkSampler Image::createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice 
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.maxLod = static_cast<float>(mipmapLevels);
 
     VkSampler textureSampler;
 
@@ -126,7 +220,7 @@ VkImageView Image::createView(VkFormat format, VkImageAspectFlags aspectFlags, V
     viewInfo.format = format;
     viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.levelCount = mipmapLevels;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = layerCount;
 
@@ -150,7 +244,7 @@ void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLa
     barrier.image = image;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = mipmapLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = layerCount;
 
@@ -185,26 +279,26 @@ void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLa
     commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
-void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t regionWidth, uint32_t regionHeight, uint32_t fullWidth, uint32_t fullHeight) {
+void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t fullWidth, uint32_t fullHeight) {
     if (fullWidth == 0) {
-        fullWidth = regionWidth;
+        fullWidth = width;
     }
 
     if (fullHeight == 0) {
-        fullHeight = regionHeight;
+        fullHeight = height;
     }
 
     VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     std::vector<VkBufferImageCopy> regions;
-    uint32_t texPerRow = fullWidth / regionWidth;
+    uint32_t texPerRow = fullWidth / width;
 
     for (uint32_t layer = 0; layer < layerCount; layer++) {
         uint32_t xLayer = layer % texPerRow;
         uint32_t yLayer = layer / texPerRow;
 
         VkBufferImageCopy region = {};
-        region.bufferOffset = (xLayer * regionWidth + yLayer * regionHeight * fullWidth) * 4;
+        region.bufferOffset = (xLayer * width + yLayer * height * fullWidth) * 4;
         region.bufferRowLength = fullWidth;
         region.bufferImageHeight = fullHeight;
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -213,8 +307,8 @@ void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueu
         region.imageSubresource.layerCount = 1;
         region.imageOffset = {0, 0, 0};
         region.imageExtent = {
-            regionWidth,
-            regionHeight,
+            width,
+            height,
             1
         };
         regions.push_back(region);
@@ -223,6 +317,10 @@ void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueu
     vkCmdCopyBufferToImage(commandBuffer, src.getBuffer(), image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
 
     commands.endSingleTime(commandBuffer, graphicsQueue, device);
+}
+
+uint32_t Image::calcMipmapLevels(int32_t texWidth, int32_t texHeight) {
+    return static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 }
 
 void Image::destroy(VmaAllocator allocator) {

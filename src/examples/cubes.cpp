@@ -256,7 +256,7 @@ public:
         vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
         vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
 
-        textureImage = Image::createTextureArray("res/cubesImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device, 16, 16, 4);
+        textureImage = Image::createTextureArray("res/cubesImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device, true, 16, 16, 4);
         textureImageView = textureImage.createTextureView(vulkanState.device);
         textureSampler = textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST);
 
@@ -267,14 +267,6 @@ public:
 
         const VkExtent2D& extent = vulkanState.swapchain.getExtent();
         ubo.create(maxFramesInFlight, vulkanState.allocator);
-
-        UniformBufferData uboData{};
-        uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
-        uboData.proj[1][1] *= -1;
-
-        ubo.update(uboData);
 
         renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
 
@@ -339,6 +331,14 @@ public:
 
         renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
         pipeline.bind(commandBuffer, currentFrame);
+
+        UniformBufferData uboData{};
+        uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
+        uboData.proj[1][1] *= -1;
+
+        ubo.update(uboData);
 
         voxelModel.draw(commandBuffer);
 

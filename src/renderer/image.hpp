@@ -9,24 +9,29 @@
 
 class Image {
 public:
-    static Image createTexture(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device);
-    static Image createTextureArray(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t width, uint32_t height, uint32_t layers);
-    static VkSampler createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, VkFilter minFilter = VK_FILTER_LINEAR, VkFilter magFilter = VK_FILTER_LINEAR);
+    static Image createTexture(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, bool enablemipMaps);
+    static Image createTextureArray(const std::string& image, VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue, VkDevice device, bool enablemipMaps, uint32_t width, uint32_t height, uint32_t layers);
 
     Image();
     Image(VkImage image);
     Image(VkImage image, VmaAllocation allocation);
-    Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t layers = 1);
+    Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipmapLevels = 1, uint32_t layers = 1);
     VkImageView createTextureView( VkDevice device);
+    VkSampler createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, VkFilter minFilter = VK_FILTER_LINEAR, VkFilter magFilter = VK_FILTER_LINEAR);
     VkImageView createView(VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device);
     void transitionImageLayout(Commands& commands, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device);
-    void copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t regionWidth, uint32_t regionHeight, uint32_t fullWidth = 0, uint32_t fullHeight = 0);
+    void copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t fullWidth = 0, uint32_t fullHeight = 0);
+    void generateMipmaps(Commands& commands, VkQueue graphicsQueue, VkDevice device);
     void destroy(VmaAllocator allocator);
 
 private:
     VkImage image;
     VmaAllocation allocation;
     uint32_t layerCount = 1;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t mipmapLevels = 1;
 
     static Buffer loadImage(const std::string& image, VmaAllocator allocator, int32_t& width, int32_t& height);
+    static uint32_t calcMipmapLevels(int32_t texWidth, int32_t texHeight);
 };
