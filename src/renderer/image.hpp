@@ -15,7 +15,8 @@ public:
     Image();
     Image(VkImage image);
     Image(VkImage image, VmaAllocation allocation);
-    Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipmapLevels = 1, uint32_t layers = 1);
+    Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
+        uint32_t mipmapLevels = 1, uint32_t layers = 1, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT);
     VkImageView createTextureView( VkDevice device);
     VkSampler createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, VkFilter minFilter = VK_FILTER_LINEAR, VkFilter magFilter = VK_FILTER_LINEAR);
     VkImageView createView(VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device);

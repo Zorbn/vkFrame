@@ -131,7 +131,7 @@ public:
 
         ubo.create(maxFramesInFlight, vulkanState.allocator);
 
-        renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
+        renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true, true);
 
         pipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
             VkDescriptorSetLayoutBinding uboLayoutBinding{};

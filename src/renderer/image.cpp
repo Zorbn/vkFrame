@@ -7,7 +7,7 @@ Image::Image(VkImage image) : image(image) {}
 Image::Image(VkImage image, VmaAllocation allocation) : image(image), allocation(allocation) {}
 
 Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-    VkMemoryPropertyFlags properties, uint32_t mipmapLevels, uint32_t layers) {
+    VkMemoryPropertyFlags properties, uint32_t mipmapLevels, uint32_t layers, VkSampleCountFlagBits samples) {
 
     layerCount = layers;
 
@@ -23,7 +23,7 @@ Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat f
     imageInfo.tiling = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.samples = samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo aci = {};

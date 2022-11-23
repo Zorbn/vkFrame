@@ -268,7 +268,7 @@ public:
         const VkExtent2D& extent = vulkanState.swapchain.getExtent();
         ubo.create(maxFramesInFlight, vulkanState.allocator);
 
-        renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true);
+        renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true, false);
 
         pipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
             VkDescriptorSetLayoutBinding uboLayoutBinding{};
