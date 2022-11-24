@@ -288,7 +288,13 @@ public:
             bindings.push_back(uboLayoutBinding);
             bindings.push_back(samplerLayoutBinding);
         });
-        pipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device);
+        pipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
+            poolSizes.resize(2);
+            poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+        });
         pipeline.createDescriptorSets(maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);

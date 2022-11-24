@@ -21,7 +21,6 @@ Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat f
     imageInfo.arrayLayers = layerCount;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
     imageInfo.samples = samples;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -152,7 +151,7 @@ Image Image::createTexture(const std::string& image, VmaAllocator allocator, Com
 
     Image textureImage = Image(allocator, texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mipMapLevels);
 
-    textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
+    textureImage.transitionImageLayout(commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
     textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device);
 
     stagingBuffer.destroy(allocator);
@@ -169,7 +168,7 @@ Image Image::createTextureArray(const std::string& image, VmaAllocator allocator
 
     Image textureImage = Image(allocator, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mipMapLevels, layers);
 
-    textureImage.transitionImageLayout(commands, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
+    textureImage.transitionImageLayout(commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, graphicsQueue, device);
     textureImage.copyFromBuffer(stagingBuffer, commands, graphicsQueue, device, texWidth, texHeight);
 
     stagingBuffer.destroy(allocator);
@@ -212,12 +211,14 @@ VkSampler Image::createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice 
     return textureSampler;
 }
 
+// TODO: Save format when creating the image instead of specifying it here.
 VkImageView Image::createView(VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
     viewInfo.viewType = layerCount == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     viewInfo.format = format;
+    viewInfo.subresourceRange = {};
     viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = mipmapLevels;
@@ -232,7 +233,7 @@ VkImageView Image::createView(VkFormat format, VkImageAspectFlags aspectFlags, V
     return imageView;
 }
 
-void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device) {
+void Image::transitionImageLayout(Commands& commands, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device) {
     VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     VkImageMemoryBarrier barrier{};
@@ -263,6 +264,12 @@ void Image::transitionImageLayout(Commands& commands, VkFormat format, VkImageLa
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     } else {
         throw std::invalid_argument("Unsupported layout transition!");
     }

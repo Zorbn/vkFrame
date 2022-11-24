@@ -20,7 +20,7 @@ public:
     VkImageView createTextureView( VkDevice device);
     VkSampler createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, VkFilter minFilter = VK_FILTER_LINEAR, VkFilter magFilter = VK_FILTER_LINEAR);
     VkImageView createView(VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device);
-    void transitionImageLayout(Commands& commands, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device);
+    void transitionImageLayout(Commands& commands, VkImageLayout oldLayout, VkImageLayout newLayout, VkQueue graphicsQueue, VkDevice device);
     void copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueue, VkDevice device, uint32_t fullWidth = 0, uint32_t fullHeight = 0);
     void generateMipmaps(Commands& commands, VkQueue graphicsQueue, VkDevice device);
     void destroy(VmaAllocator allocator);

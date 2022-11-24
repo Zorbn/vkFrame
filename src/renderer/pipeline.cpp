@@ -14,12 +14,16 @@ void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std
     }
 }
 
-void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device) {
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+// TODO: Make this customizable.
+void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool) {
+    // std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    // poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+    // poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    // poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    setupPool(poolSizes);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -52,8 +56,8 @@ void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice d
 }
 
 void Pipeline::bind(VkCommandBuffer commandBuffer, int32_t currentFrame) {
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 }
 
 VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code, VkDevice device) {

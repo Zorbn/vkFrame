@@ -154,7 +154,7 @@ public:
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
     void createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings);
-    void createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device);
+    void createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool);
     void createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor);
     void cleanup(VkDevice device);
 
