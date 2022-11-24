@@ -78,6 +78,3 @@ target_link_libraries(CubesExample ${LIB_NAME})
 
 add_executable(SsaoExample src/examples/ssao.cpp)
 target_link_libraries(SsaoExample ${LIB_NAME})
-
-add_executable(DeferredExample src/examples/deferred.cpp)
-target_link_libraries(DeferredExample ${LIB_NAME})
