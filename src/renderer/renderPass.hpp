@@ -13,7 +13,7 @@
 class RenderPass {
 public:
     void createCustom(VkDevice device, Swapchain& swapchain, std::function<VkRenderPass()> setupRenderPass,
-        std::function<void()> cleanupCallback, std::function<void(const VkExtent2D& extent)> recreateCallback,
+        std::function<void(const VkExtent2D& extent)> recreateCallback, std::function<void()> cleanupCallback,
         std::function<void(std::vector<VkImageView>& attachments, VkImageView imageView)> setupFramebuffer);
     void create(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, bool enableDepth, bool enableMsaa);
     void recreate(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain);

@@ -339,7 +339,7 @@ void Renderer::drawFrame(std::function<void(VulkanState& vulkanState, VkCommandB
 
     vkResetFences(vulkanState.device, 1, &inFlightFences[currentFrame]);
 
-    vulkanState.commands.resetBuffers(imageIndex, currentFrame);
+    vulkanState.commands.resetBuffer(imageIndex, currentFrame);
     const VkCommandBuffer& currentBuffer = vulkanState.commands.getBuffer(currentFrame);
     renderCallback(vulkanState, currentBuffer, imageIndex, currentFrame);
 

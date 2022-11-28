@@ -386,18 +386,20 @@ public:
             }
 
             return renderPass;
-        }, [&] {
-            vkDestroyImageView(vulkanState.device, colorImageView, nullptr);
-            colorImage.destroy(vulkanState.allocator);
-        }, [&](const VkExtent2D &extent) {
-            const VkFormat& imageFormat = vulkanState.swapchain.getImageFormat();
+        }, [&](const VkExtent2D& extent) {
+            // const VkFormat& imageFormat = vulkanState.swapchain.getImageFormat();
 
             colorImage = Image(vulkanState.allocator, extent.width, extent.height, VK_FORMAT_R32G32B32A32_SFLOAT,
                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
-            colorImageView = colorImage.createView(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, vulkanState.device);
-
+            colorImageView = colorImage.createView(VK_IMAGE_ASPECT_COLOR_BIT, vulkanState.device);
+            std::cout << colorImageView << std::endl;
+        }, [=] {
+            vkDestroyImageView(vulkanState.device, colorImageView, nullptr);
+            colorImage.destroy(vulkanState.allocator);
         }, [&](std::vector<VkImageView> &attachments, VkImageView imageView) {
+            // This should be  called by recreation.
+            std::cout << colorImageView << std::endl;
             attachments.push_back(colorImageView);
         });
 
@@ -567,6 +569,8 @@ public:
     }
 
     void update(VulkanState& vulkanState) {
+        // FIXME: Command buffers need be stopped and then restarted for this?
+        // finalPipeline.recreateDescriptorSets(2, vulkanState.device);
     }
 
     void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
@@ -581,7 +585,6 @@ public:
         ubo.update(uboData);
 
         if (once) {
-            once = false;
             VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
             renderPass.begin(imageIndex, singleCmd, extent, 0.0f, 0.0f, 0.0f, 0.0f, true);
             pipeline.bind(singleCmd, currentFrame);
@@ -594,6 +597,8 @@ public:
 
         // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
 
+        // finalPipeline.recreateDescriptorSets(2, vulkanState.device);
+
         finalRenderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 1.0f, 1.0f);
         finalPipeline.bind(commandBuffer, currentFrame);
 
@@ -605,6 +610,90 @@ public:
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {
         renderPass.recreate(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain);
         finalRenderPass.recreate(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain);
+
+        // TODO: Pipeline needs a nice recreation api.
+        finalPipeline.cleanup(vulkanState.device);
+        finalPipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
+            VkDescriptorSetLayoutBinding uboLayoutBinding{};
+            uboLayoutBinding.binding = 0;
+            uboLayoutBinding.descriptorCount = 1;
+            uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            uboLayoutBinding.pImmutableSamplers = nullptr;
+            uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+            VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+            samplerLayoutBinding.binding = 1;
+            samplerLayoutBinding.descriptorCount = 1;
+            samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            samplerLayoutBinding.pImmutableSamplers = nullptr;
+            samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
+            depthSamplerLayoutBinding.binding = 2;
+            depthSamplerLayoutBinding.descriptorCount = 1;
+            depthSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            depthSamplerLayoutBinding.pImmutableSamplers = nullptr;
+            depthSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            bindings.push_back(uboLayoutBinding);
+            bindings.push_back(samplerLayoutBinding);
+            bindings.push_back(depthSamplerLayoutBinding);
+        });
+        finalPipeline.createDescriptorPool(2, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
+            poolSizes.resize(3);
+            poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(2);
+            poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            poolSizes[1].descriptorCount = static_cast<uint32_t>(2);
+            poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            poolSizes[2].descriptorCount = static_cast<uint32_t>(2);
+        });
+        finalPipeline.createDescriptorSets(2, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = ubo.getBuffer(i);
+            bufferInfo.offset = 0;
+            bufferInfo.range = ubo.getDataSize();
+
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = textureImageView;
+            imageInfo.sampler = textureSampler;
+
+            VkDescriptorImageInfo depthImageInfo{};
+            depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            std::cout << colorImageView << std::endl;
+            depthImageInfo.imageView = colorImageView;
+            depthImageInfo.sampler = colorSampler;
+
+            descriptorWrites.resize(3);
+
+            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[0].dstSet = descriptorSet;
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[1].dstSet = descriptorSet;
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &imageInfo;
+
+            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[2].dstSet = descriptorSet;
+            descriptorWrites[2].dstBinding = 2;
+            descriptorWrites[2].dstArrayElement = 0;
+            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptorWrites[2].descriptorCount = 1;
+            descriptorWrites[2].pImageInfo = &depthImageInfo;
+
+            vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        });
+        finalPipeline.create<VertexData, InstanceData>("res/ssaoShader.vert.spv", "res/ssaoShader.frag.spv", vulkanState.device, finalRenderPass);
     }
 
     void cleanup(VulkanState& vulkanState) {

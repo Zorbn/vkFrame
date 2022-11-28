@@ -14,14 +14,7 @@ void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std
     }
 }
 
-// TODO: Make this customizable.
 void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool) {
-    // std::array<VkDescriptorPoolSize, 2> poolSizes{};
-    // poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    // poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
-    // poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    // poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
-
     std::vector<VkDescriptorPoolSize> poolSizes;
     setupPool(poolSizes);
 

@@ -2,12 +2,12 @@
 
 Image::Image() {}
 
-Image::Image(VkImage image) : image(image) {}
+Image::Image(VkImage image, VkFormat format) : image(image), format(format) {}
 
-Image::Image(VkImage image, VmaAllocation allocation) : image(image), allocation(allocation) {}
+Image::Image(VkImage image, VmaAllocation allocation, VkFormat format) : image(image), allocation(allocation), format(format) {}
 
 Image::Image(VmaAllocator allocator, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-    VkMemoryPropertyFlags properties, uint32_t mipmapLevels, uint32_t layers, VkSampleCountFlagBits samples) {
+    VkMemoryPropertyFlags properties, uint32_t mipmapLevels, uint32_t layers, VkSampleCountFlagBits samples) : format(format) {
 
     layerCount = layers;
 
@@ -179,7 +179,7 @@ Image Image::createTextureArray(const std::string& image, VmaAllocator allocator
 }
 
 VkImageView Image::createTextureView(VkDevice device) {
-    return createView(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, device);
+    return createView(VK_IMAGE_ASPECT_COLOR_BIT, device);
 }
 
 VkSampler Image::createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, VkFilter minFilter, VkFilter magFilter) {
@@ -211,8 +211,7 @@ VkSampler Image::createTextureSampler(VkPhysicalDevice physicalDevice, VkDevice 
     return textureSampler;
 }
 
-// TODO: Save format when creating the image instead of specifying it here.
-VkImageView Image::createView(VkFormat format, VkImageAspectFlags aspectFlags, VkDevice device) {
+VkImageView Image::createView(VkImageAspectFlags aspectFlags, VkDevice device) {
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;

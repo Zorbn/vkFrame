@@ -1,9 +1,8 @@
 #include "renderPass.hpp"
 #include "swapchain.hpp"
 
-// TODO: Swap order of cleanup and recreate callbacks
 void RenderPass::createCustom(VkDevice device, Swapchain& swapchain, std::function<VkRenderPass()> setupRenderPass,
-    std::function<void()> cleanupCallback, std::function<void(const VkExtent2D& extent)> recreateCallback,
+    std::function<void(const VkExtent2D& extent)> recreateCallback, std::function<void()> cleanupCallback,
     std::function<void(std::vector<VkImageView>& attachments, VkImageView imageView)> setupFramebuffer) {
 
     imageFormat = swapchain.getImageFormat();
@@ -115,16 +114,16 @@ void RenderPass::create(VkPhysicalDevice physicalDevice, VkDevice device, VmaAll
         return renderPass;
     };
 
+    std::function<void(const VkExtent2D&)> recreateCallback = [=](const VkExtent2D& extent) {
+        createColorResources(allocator, physicalDevice, device, extent);
+        createDepthResources(allocator, physicalDevice, device, extent);
+    };
+
     std::function<void()> cleanupCallback = [=] {
         vkDestroyImageView(device, depthImageView, nullptr);
         depthImage.destroy(allocator);
         vkDestroyImageView(device, colorImageView, nullptr);
         colorImage.destroy(allocator);
-    };
-
-    std::function<void(const VkExtent2D&)> recreateCallback = [=](const VkExtent2D& extent) {
-        createColorResources(allocator, physicalDevice, device, extent);
-        createDepthResources(allocator, physicalDevice, device, extent);
     };
 
     std::function<void(std::vector<VkImageView>&, VkImageView)> setupFramebuffer = [&](std::vector<VkImageView>& attachments, VkImageView imageView) {
@@ -141,11 +140,12 @@ void RenderPass::create(VkPhysicalDevice physicalDevice, VkDevice device, VmaAll
         }
     };
 
-    createCustom(device, swapchain, setupRenderPass, cleanupCallback, recreateCallback, setupFramebuffer);
+    createCustom(device, swapchain, setupRenderPass, recreateCallback, cleanupCallback, setupFramebuffer);
 }
 
 void RenderPass::createImages(VkDevice device, Swapchain& swapchain) {
     VkSwapchainKHR vkSwapchain = swapchain.getSwapchain();
+    VkFormat format = swapchain.getImageFormat();
     uint32_t imageCount;
     vkGetSwapchainImagesKHR(device, vkSwapchain, &imageCount, nullptr);
     std::vector<VkImage> imagesVk;
@@ -155,7 +155,7 @@ void RenderPass::createImages(VkDevice device, Swapchain& swapchain) {
     vkGetSwapchainImagesKHR(device, vkSwapchain, &imageCount, imagesVk.data());
 
     for (VkImage vkImage : imagesVk) {
-        images.push_back(Image(vkImage));
+        images.push_back(Image(vkImage, format));
     }
 }
 
@@ -223,7 +223,7 @@ void RenderPass::createImageViews(VkDevice device) {
     imageViews.resize(images.size());
 
     for (uint32_t i = 0; i < images.size(); i++) {
-        imageViews[i] = images[i].createView(imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, device);
+        imageViews[i] = images[i].createView(VK_IMAGE_ASPECT_COLOR_BIT, device);
     }
 }
 
@@ -253,13 +253,13 @@ void RenderPass::createDepthResources(VmaAllocator allocator, VkPhysicalDevice p
     VkFormat depthFormat = findDepthFormat(physicalDevice);
 
     depthImage = Image(allocator, extent.width, extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1, 1, msaaSamples);
-    depthImageView = depthImage.createView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, device);
+    depthImageView = depthImage.createView(VK_IMAGE_ASPECT_DEPTH_BIT, device);
 }
 
 void RenderPass::createColorResources(VmaAllocator allocator, VkPhysicalDevice physicalDevice, VkDevice device, VkExtent2D extent) {
     colorImage = Image(allocator, extent.width, extent.height, imageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 1, 1, msaaSamples);
-    colorImageView = colorImage.createView(imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, device);
+    colorImageView = colorImage.createView(VK_IMAGE_ASPECT_COLOR_BIT, device);
 }
 
 void RenderPass::recreate(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain) {
