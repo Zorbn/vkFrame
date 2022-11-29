@@ -221,8 +221,6 @@ private:
     std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
 
-    bool once = true;
-
 public:
     int32_t getVoxel(size_t x, size_t y, size_t z) {
         if (x < 0 || x >= mapSize || y < 0 || y >= mapSize || z < 0 || z >= mapSize) {
@@ -589,16 +587,14 @@ public:
 
         ubo.update(uboData);
 
-        if (once) {
-            // VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
-            renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 0.0f, false);
-            pipeline.bind(commandBuffer, currentFrame);
+        // VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
+        renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 0.0f, false);
+        pipeline.bind(commandBuffer, currentFrame);
 
-            voxelModel.draw(commandBuffer);
+        voxelModel.draw(commandBuffer);
 
-            renderPass.end(commandBuffer, false);
-            // vulkanState.commands.endSingleTime(singleCmd, vulkanState.graphicsQueue, vulkanState.device);
-        }
+        renderPass.end(commandBuffer, false);
+        // vulkanState.commands.endSingleTime(singleCmd, vulkanState.graphicsQueue, vulkanState.device);
 
         // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
 
