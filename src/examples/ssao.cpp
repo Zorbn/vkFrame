@@ -580,17 +580,24 @@ public:
         uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
         uboData.proj[1][1] *= -1;
 
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to begin recording command buffer!");
+        }
+
         ubo.update(uboData);
 
         if (once) {
-            VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
-            renderPass.begin(imageIndex, singleCmd, extent, 0.0f, 0.0f, 0.0f, 0.0f, true);
-            pipeline.bind(singleCmd, currentFrame);
+            // VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
+            renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 0.0f, false);
+            pipeline.bind(commandBuffer, currentFrame);
 
-            voxelModel.draw(singleCmd);
+            voxelModel.draw(commandBuffer);
 
-            renderPass.end(singleCmd, true);
-            vulkanState.commands.endSingleTime(singleCmd, vulkanState.graphicsQueue, vulkanState.device);
+            renderPass.end(commandBuffer, false);
+            // vulkanState.commands.endSingleTime(singleCmd, vulkanState.graphicsQueue, vulkanState.device);
         }
 
         // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
@@ -603,6 +610,10 @@ public:
         voxelModel.draw(commandBuffer);
 
         finalRenderPass.end(commandBuffer);
+
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to record command buffer!");
+        }
     }
 
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {

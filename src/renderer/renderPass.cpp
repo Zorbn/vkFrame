@@ -160,13 +160,6 @@ void RenderPass::createImages(VkDevice device, Swapchain& swapchain) {
 }
 
 void RenderPass::begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer, VkExtent2D extent, float clearColorR, float clearColorG, float clearColorB, float clearColorA, /* TODO */bool singleTime) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    if (!singleTime && vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to begin recording command buffer!");
-    }
-
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderPass;
@@ -201,10 +194,6 @@ void RenderPass::begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer,
 
 void RenderPass::end(VkCommandBuffer commandBuffer, /* TODO */bool singleTime) {
     vkCmdEndRenderPass(commandBuffer);
-
-    if (!singleTime && vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to record command buffer!");
-    }
 }
 
 const VkRenderPass& RenderPass::getRenderPass() {
