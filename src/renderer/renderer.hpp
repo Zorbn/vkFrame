@@ -46,12 +46,13 @@ struct VulkanState {
     VmaAllocator allocator;
     Swapchain swapchain;
     Commands commands;
+    uint32_t maxFramesInFlight;
 };
 
 class Renderer {
 public:
-    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
-        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback,
+    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, const uint32_t maxFramesInFlight,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback,
         std::function<void(VulkanState& vulkanState)> updateCallback,
         std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
         std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
@@ -77,7 +78,7 @@ private:
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-    void initVulkan(std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback);
+    void initVulkan(const uint32_t maxFramesInFlight, std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();

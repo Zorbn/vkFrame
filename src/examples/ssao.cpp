@@ -262,11 +262,11 @@ public:
         }
     }
 
-    void init(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
+    void init(VulkanState& vulkanState, int32_t width, int32_t height) {
         vulkanState.swapchain.create(vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
 
         vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
-        vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
+        vulkanState.commands.createBuffers(vulkanState.device, vulkanState.maxFramesInFlight);
 
         textureImage = Image::createTextureArray("res/cubesImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device, true, 16, 16, 4);
         textureImageView = textureImage.createTextureView(vulkanState.device);
@@ -298,7 +298,7 @@ public:
         voxelModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
 
         const VkExtent2D& extent = vulkanState.swapchain.getExtent();
-        ubo.create(maxFramesInFlight, vulkanState.allocator);
+        ubo.create(vulkanState.maxFramesInFlight, vulkanState.allocator);
 
         renderPass.createCustom(vulkanState.device, vulkanState.swapchain, [&] {
             VkAttachmentDescription colorAttachment{};
@@ -393,13 +393,11 @@ public:
                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
             colorImageView = colorImage.createView(VK_IMAGE_ASPECT_COLOR_BIT, vulkanState.device);
-            std::cout << colorImageView << std::endl;
         }, [=] {
             vkDestroyImageView(vulkanState.device, colorImageView, nullptr);
             colorImage.destroy(vulkanState.allocator);
         }, [&](std::vector<VkImageView> &attachments, VkImageView imageView) {
             // This should be  called by recreation.
-            std::cout << colorImageView << std::endl;
             attachments.push_back(colorImageView);
         });
 
@@ -431,16 +429,16 @@ public:
             bindings.push_back(samplerLayoutBinding);
             bindings.push_back(depthSamplerLayoutBinding);
         });
-        finalPipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
+        finalPipeline.createDescriptorPool(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
             poolSizes.resize(3);
             poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
             poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[1].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
             poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            poolSizes[2].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[2].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
         });
-        finalPipeline.createDescriptorSets(maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
+        finalPipeline.createDescriptorSets(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);
             bufferInfo.offset = 0;
@@ -512,16 +510,16 @@ public:
             // bindings.push_back(samplerLayoutBinding);
             // bindings.push_back(depthSamplerLayoutBinding);
         });
-        pipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
+        pipeline.createDescriptorPool(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
             poolSizes.resize(1);
             poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
             // poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             // poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
             // poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             // poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
         });
-        pipeline.createDescriptorSets(maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
+        pipeline.createDescriptorSets(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);
             bufferInfo.offset = 0;
@@ -610,90 +608,7 @@ public:
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {
         renderPass.recreate(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain);
         finalRenderPass.recreate(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain);
-
-        // TODO: Pipeline needs a nice recreation api.
-        finalPipeline.cleanup(vulkanState.device);
-        finalPipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-            VkDescriptorSetLayoutBinding uboLayoutBinding{};
-            uboLayoutBinding.binding = 0;
-            uboLayoutBinding.descriptorCount = 1;
-            uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            uboLayoutBinding.pImmutableSamplers = nullptr;
-            uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-            VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-            samplerLayoutBinding.binding = 1;
-            samplerLayoutBinding.descriptorCount = 1;
-            samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            samplerLayoutBinding.pImmutableSamplers = nullptr;
-            samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-            VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
-            depthSamplerLayoutBinding.binding = 2;
-            depthSamplerLayoutBinding.descriptorCount = 1;
-            depthSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            depthSamplerLayoutBinding.pImmutableSamplers = nullptr;
-            depthSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-            bindings.push_back(uboLayoutBinding);
-            bindings.push_back(samplerLayoutBinding);
-            bindings.push_back(depthSamplerLayoutBinding);
-        });
-        finalPipeline.createDescriptorPool(2, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
-            poolSizes.resize(3);
-            poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSizes[0].descriptorCount = static_cast<uint32_t>(2);
-            poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            poolSizes[1].descriptorCount = static_cast<uint32_t>(2);
-            poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            poolSizes[2].descriptorCount = static_cast<uint32_t>(2);
-        });
-        finalPipeline.createDescriptorSets(2, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = ubo.getBuffer(i);
-            bufferInfo.offset = 0;
-            bufferInfo.range = ubo.getDataSize();
-
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = textureImageView;
-            imageInfo.sampler = textureSampler;
-
-            VkDescriptorImageInfo depthImageInfo{};
-            depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            std::cout << colorImageView << std::endl;
-            depthImageInfo.imageView = colorImageView;
-            depthImageInfo.sampler = colorSampler;
-
-            descriptorWrites.resize(3);
-
-            descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = descriptorSet;
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-            descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[1].dstSet = descriptorSet;
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfo;
-
-            descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[2].dstSet = descriptorSet;
-            descriptorWrites[2].dstBinding = 2;
-            descriptorWrites[2].dstArrayElement = 0;
-            descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrites[2].descriptorCount = 1;
-            descriptorWrites[2].pImageInfo = &depthImageInfo;
-
-            vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-        });
-        finalPipeline.create<VertexData, InstanceData>("res/ssaoShader.vert.spv", "res/ssaoShader.frag.spv", vulkanState.device, finalRenderPass);
+        finalPipeline.recreate<VertexData, InstanceData>(vulkanState.device, vulkanState.maxFramesInFlight, finalRenderPass);
     }
 
     void cleanup(VulkanState& vulkanState) {
@@ -716,8 +631,8 @@ public:
     int run() {
         Renderer renderer;
 
-        std::function<void(VulkanState&, int32_t, int32_t, uint32_t)> initCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
-            this->init(vulkanState, width, height, maxFramesInFlight);
+        std::function<void(VulkanState&, int32_t, int32_t)> initCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height) {
+            this->init(vulkanState, width, height);
         };
 
         std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {
@@ -738,7 +653,7 @@ public:
         };
 
         try {
-            renderer.run("Cubes", 640, 480, initCallback, updateCallback, renderCallback, resizeCallback, cleanupCallback);
+            renderer.run("Cubes", 640, 480, 2, initCallback, updateCallback, renderCallback, resizeCallback, cleanupCallback);
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
             return EXIT_FAILURE;

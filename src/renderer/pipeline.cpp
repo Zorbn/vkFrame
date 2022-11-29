@@ -1,6 +1,8 @@
 #include "pipeline.hpp"
 
 void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings) {
+    this->setupBindings = setupBindings;
+
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     setupBindings(bindings);
 
@@ -15,6 +17,8 @@ void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std
 }
 
 void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool) {
+    this->setupPool = setupPool;
+
     std::vector<VkDescriptorPoolSize> poolSizes;
     setupPool(poolSizes);
 
@@ -30,6 +34,8 @@ void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice d
 }
 
 void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor) {
+    this->setupDescriptor = setupDescriptor;
+
     std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

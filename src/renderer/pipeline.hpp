@@ -14,6 +14,9 @@
 class Pipeline {
 public:
     template <typename V, typename I> void create(const std::string& vertShader, const std::string& fragShader, VkDevice device, RenderPass& renderPass) {
+        this->fragShader = fragShader;
+        this->vertShader = vertShader;
+
         auto vertShaderCode = readFile(vertShader);
         auto fragShaderCode = readFile(fragShader);
 
@@ -153,6 +156,15 @@ public:
         vkDestroyShaderModule(device, fragShaderModule, nullptr);
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
+
+    template <typename V, typename I> void recreate(VkDevice device, const uint32_t maxFramesInFlight, RenderPass& renderPass) {
+        cleanup(device);
+        createDescriptorSetLayout(device, setupBindings);
+        createDescriptorPool(maxFramesInFlight, device, setupPool);
+        createDescriptorSets(maxFramesInFlight, device, setupDescriptor);
+        create<V, I>(vertShader, fragShader, device, renderPass);
+    }
+
     void createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings);
     void createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool);
     void createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor);
@@ -161,7 +173,6 @@ public:
     void bind(VkCommandBuffer commandBuffer, int32_t currentFrame);
 
 private:
-
     static VkShaderModule createShaderModule(const std::vector<char>& code, VkDevice device);
     static std::vector<char> readFile(const std::string& filename);
 
@@ -171,4 +182,11 @@ private:
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
+
+    std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings;
+    std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool;
+    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor;
+
+    std::string vertShader;
+    std::string fragShader;
 };

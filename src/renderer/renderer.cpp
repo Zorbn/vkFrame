@@ -1,7 +1,5 @@
 #include "renderer.hpp"
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
-
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -32,15 +30,15 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
-void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
-    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback,
+void Renderer::run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, const uint32_t maxFramesInFlight,
+    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback,
     std::function<void(VulkanState& vulkanState)> updateCallback,
     std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
     std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
     std::function<void(VulkanState& vulkanState)> cleanupCallback) {
 
     initWindow(windowTitle, windowWidth, windowHeight);
-    initVulkan(initCallback);
+    initVulkan(maxFramesInFlight, initCallback);
     mainLoop(renderCallback, updateCallback, resizeCallback);
     cleanup(cleanupCallback);
 }
@@ -60,7 +58,7 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int heig
     app->framebufferResized = true;
 }
 
-void Renderer::initVulkan(std::function<void(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight)> initCallback) {
+void Renderer::initVulkan(const uint32_t maxFramesInFlight, std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback) {
 
     createInstance();
     setupDebugMessenger();
@@ -73,7 +71,9 @@ void Renderer::initVulkan(std::function<void(VulkanState& vulkanState, int32_t w
     int32_t height;
     glfwGetFramebufferSize(window, &width, &height);
 
-    initCallback(vulkanState, width, height, MAX_FRAMES_IN_FLIGHT);
+    vulkanState.maxFramesInFlight = maxFramesInFlight;
+
+    initCallback(vulkanState, width, height);
 
     createSyncObjects();
 }
@@ -124,7 +124,7 @@ void Renderer::cleanup(std::function<void(VulkanState& vulkanState)> cleanupCall
 
     vmaDestroyAllocator(vulkanState.allocator);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < vulkanState.maxFramesInFlight; i++) {
         vkDestroySemaphore(vulkanState.device, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(vulkanState.device, imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(vulkanState.device, inFlightFences[i], nullptr);
@@ -297,9 +297,9 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pro
 }
 
 void Renderer::createSyncObjects() {
-    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    imageAvailableSemaphores.resize(vulkanState.maxFramesInFlight);
+    renderFinishedSemaphores.resize(vulkanState.maxFramesInFlight);
+    inFlightFences.resize(vulkanState.maxFramesInFlight);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -308,7 +308,7 @@ void Renderer::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < vulkanState.maxFramesInFlight; i++) {
         if (vkCreateSemaphore(vulkanState.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(vulkanState.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
             vkCreateFence(vulkanState.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
@@ -389,7 +389,7 @@ void Renderer::drawFrame(std::function<void(VulkanState& vulkanState, VkCommandB
         throw std::runtime_error("Failed to present swap chain image!");
     }
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    currentFrame = (currentFrame + 1) % vulkanState.maxFramesInFlight;
 }
 
 bool Renderer::isDeviceSuitable(VkPhysicalDevice device) {
