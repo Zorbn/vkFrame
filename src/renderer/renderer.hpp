@@ -12,31 +12,34 @@
 
 #include <vk_mem_alloc.h>
 
-#include <iostream>
-#include <stdexcept>
 #include <algorithm>
-#include <chrono>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cinttypes>
-#include <limits>
 #include <array>
+#include <chrono>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <limits>
 #include <optional>
 #include <set>
-#include <algorithm>
-#include <functional>
+#include <stdexcept>
+#include <vector>
 
 #include "buffer.hpp"
 #include "commands.hpp"
-#include "queueFamilyIndices.hpp"
 #include "model.hpp"
-#include "swapchain.hpp"
 #include "pipeline.hpp"
+#include "queueFamilyIndices.hpp"
+#include "swapchain.hpp"
 #include "uniformBuffer.hpp"
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
+                                      const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+                                      const VkAllocationCallbacks* pAllocator,
+                                      VkDebugUtilsMessengerEXT* pDebugMessenger);
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+                                   const VkAllocationCallbacks* pAllocator);
 
 struct VulkanState {
     VkPhysicalDevice physicalDevice;
@@ -50,15 +53,19 @@ struct VulkanState {
 };
 
 class Renderer {
-public:
-    void run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight, const uint32_t maxFramesInFlight,
+  public:
+    void
+    run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
+        const uint32_t maxFramesInFlight,
         std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback,
         std::function<void(VulkanState& vulkanState)> updateCallback,
-        std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
+        std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer,
+                           uint32_t imageIndex, uint32_t currentFrame)>
+            renderCallback,
         std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback,
         std::function<void(VulkanState& vulkanState)> cleanupCallback);
 
-private:
+  private:
     GLFWwindow* window;
 
     VkInstance instance;
@@ -74,20 +81,29 @@ private:
 
     bool framebufferResized = false;
 
-    void initWindow(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight);
+    void initWindow(const std::string& windowTitle, const uint32_t windowWidth,
+                    const uint32_t windowHeight);
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-    void initVulkan(const uint32_t maxFramesInFlight, std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback);
+    void initVulkan(
+        const uint32_t maxFramesInFlight,
+        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();
 
-    void mainLoop(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
-        std::function<void(VulkanState& vulkanState)> updateCallback,
-        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback);
-    void drawFrame(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)> renderCallback,
-        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> resizeCallback);
+    void mainLoop(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer,
+                                     uint32_t imageIndex, uint32_t currentFrame)>
+                      renderCallback,
+                  std::function<void(VulkanState& vulkanState)> updateCallback,
+                  std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)>
+                      resizeCallback);
+    void drawFrame(std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer,
+                                      uint32_t imageIndex, uint32_t currentFrame)>
+                       renderCallback,
+                   std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)>
+                       resizeCallback);
     void waitWhileMinimized();
 
     void cleanup(std::function<void(VulkanState& vulkanState)> cleanupCallback);
@@ -113,5 +129,8 @@ private:
     std::vector<const char*> getRequiredExtensions();
     bool checkValidationLayerSupport();
 
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL
+    debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                  VkDebugUtilsMessageTypeFlagsEXT messageType,
+                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 };

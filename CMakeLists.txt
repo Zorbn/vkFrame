@@ -3,8 +3,8 @@ include(CheckCCompilerFlag)
 
 cmake_minimum_required(VERSION 3.17)
 
-project(vk_cubes)
-set(LIB_NAME vk_cubes)
+project(vkFrame)
+set(LIB_NAME vkFrame)
 
 find_package(Vulkan REQUIRED)
 

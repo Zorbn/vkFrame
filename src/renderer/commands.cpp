@@ -19,7 +19,8 @@ VkCommandBuffer Commands::beginSingleTime(VkQueue graphicsQueue, VkDevice device
     return commandBuffer;
 }
 
-void Commands::endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device) {
+void Commands::endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueue,
+                             VkDevice device) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo{};
@@ -34,7 +35,8 @@ void Commands::endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueu
 }
 
 void Commands::createPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface) {
-    QueueFamilyIndices queueFamilyIndices = QueueFamilyIndices::findQueueFamilies(physicalDevice, surface);
+    QueueFamilyIndices queueFamilyIndices =
+        QueueFamilyIndices::findQueueFamilies(physicalDevice, surface);
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -53,7 +55,7 @@ void Commands::createBuffers(VkDevice device, size_t maxFramesInFlight) {
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) buffers.size();
+    allocInfo.commandBufferCount = (uint32_t)buffers.size();
 
     if (vkAllocateCommandBuffers(device, &allocInfo, buffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate command buffers!");
@@ -66,23 +68,21 @@ void Commands::resetBuffer(const uint32_t imageIndex, const uint32_t currentFram
 
 void Commands::beginBuffer(const uint32_t currentFrame) {
     VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        if (vkBeginCommandBuffer(buffers[currentFrame], &beginInfo) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to begin recording command buffer!");
-        }
+    if (vkBeginCommandBuffer(buffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to begin recording command buffer!");
+    }
 }
 
 void Commands::endBuffer(const uint32_t currentFrame) {
     if (vkEndCommandBuffer(buffers[currentFrame]) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to record command buffer!");
-        }
+        throw std::runtime_error("Failed to record command buffer!");
+    }
 }
 
 const VkCommandBuffer& Commands::getBuffer(const uint32_t currentFrame) {
     return buffers[currentFrame];
 }
 
-void Commands::destroy(VkDevice device) {
-    vkDestroyCommandPool(device, commandPool, nullptr);
-}
+void Commands::destroy(VkDevice device) { vkDestroyCommandPool(device, commandPool, nullptr); }

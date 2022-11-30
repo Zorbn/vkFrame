@@ -7,7 +7,7 @@
 #include "queueFamilyIndices.hpp"
 
 class Commands {
-public:
+  public:
     VkCommandBuffer beginSingleTime(VkQueue graphicsQueue, VkDevice device);
     void endSingleTime(VkCommandBuffer commandBuffer, VkQueue graphicsQueue, VkDevice device);
 
@@ -21,7 +21,7 @@ public:
 
     void destroy(VkDevice device);
 
-private:
+  private:
     VkCommandPool commandPool;
     std::vector<VkCommandBuffer> buffers;
 };

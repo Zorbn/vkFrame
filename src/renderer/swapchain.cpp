@@ -1,14 +1,18 @@
 #include "swapchain.hpp"
 
-void Swapchain::create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight, VkPresentModeKHR preferredPresentMode) {
+void Swapchain::create(VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                       int32_t windowWidth, int32_t windowHeight,
+                       VkPresentModeKHR preferredPresentMode) {
     SwapchainSupportDetails swapchainSupport = querySupport(physicalDevice, surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormat(swapchainSupport.formats);
-    VkPresentModeKHR presentMode = choosePresentMode(swapchainSupport.presentModes, preferredPresentMode);
+    VkPresentModeKHR presentMode =
+        choosePresentMode(swapchainSupport.presentModes, preferredPresentMode);
     extent = chooseExtent(swapchainSupport.capabilities, windowWidth, windowHeight);
 
     uint32_t imageCount = swapchainSupport.capabilities.minImageCount + 1;
-    if (swapchainSupport.capabilities.maxImageCount > 0 && imageCount > swapchainSupport.capabilities.maxImageCount) {
+    if (swapchainSupport.capabilities.maxImageCount > 0 &&
+        imageCount > swapchainSupport.capabilities.maxImageCount) {
         imageCount = swapchainSupport.capabilities.maxImageCount;
     }
 
@@ -64,15 +68,18 @@ SwapchainSupportDetails Swapchain::querySupport(VkPhysicalDevice device, VkSurfa
 
     if (presentModeCount != 0) {
         details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
+                                                  details.presentModes.data());
     }
 
     return details;
 }
 
-VkSurfaceFormatKHR Swapchain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+VkSurfaceFormatKHR
+Swapchain::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
     for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+            availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }
     }
@@ -80,7 +87,9 @@ VkSurfaceFormatKHR Swapchain::chooseSurfaceFormat(const std::vector<VkSurfaceFor
     return availableFormats[0];
 }
 
-VkPresentModeKHR Swapchain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredPresentMode) {
+VkPresentModeKHR
+Swapchain::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes,
+                             VkPresentModeKHR preferredPresentMode) {
     for (const auto& availablePresentMode : availablePresentModes) {
         if (availablePresentMode == preferredPresentMode) {
             return availablePresentMode;
@@ -90,17 +99,18 @@ VkPresentModeKHR Swapchain::choosePresentMode(const std::vector<VkPresentModeKHR
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D Swapchain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities, int32_t windowWidth, int32_t windowHeight) {
+VkExtent2D Swapchain::chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities,
+                                   int32_t windowWidth, int32_t windowHeight) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     } else {
-        VkExtent2D actualExtent = {
-            static_cast<uint32_t>(windowWidth),
-            static_cast<uint32_t>(windowHeight)
-        };
+        VkExtent2D actualExtent = {static_cast<uint32_t>(windowWidth),
+                                   static_cast<uint32_t>(windowHeight)};
 
-        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
+                                        capabilities.maxImageExtent.width);
+        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+                                         capabilities.maxImageExtent.height);
 
         return actualExtent;
     }
@@ -110,7 +120,8 @@ void Swapchain::cleanup(VmaAllocator allocator, VkDevice device) {
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 }
 
-void Swapchain::recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight) {
+void Swapchain::recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevice physicalDevice,
+                         VkSurfaceKHR surface, int32_t windowWidth, int32_t windowHeight) {
     vkDeviceWaitIdle(device);
 
     cleanup(allocator, device);
@@ -119,17 +130,12 @@ void Swapchain::recreate(VmaAllocator allocator, VkDevice device, VkPhysicalDevi
 }
 
 VkResult Swapchain::getNextImage(VkDevice device, VkSemaphore semaphore, uint32_t& imageIndex) {
-    return vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex);
+    return vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE,
+                                 &imageIndex);
 }
 
-const VkSwapchainKHR& Swapchain::getSwapchain() {
-    return swapchain;
-}
+const VkSwapchainKHR& Swapchain::getSwapchain() { return swapchain; }
 
-const VkFormat& Swapchain::getImageFormat() {
-    return imageFormat;
-}
+const VkFormat& Swapchain::getImageFormat() { return imageFormat; }
 
-const VkExtent2D& Swapchain::getExtent() {
-    return extent;
-}
+const VkExtent2D& Swapchain::getExtent() { return extent; }

@@ -1,6 +1,8 @@
 #include "pipeline.hpp"
 
-void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings) {
+void Pipeline::createDescriptorSetLayout(
+    VkDevice device,
+    std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings) {
     this->setupBindings = setupBindings;
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -11,12 +13,15 @@ void Pipeline::createDescriptorSetLayout(VkDevice device, std::function<void(std
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) !=
+        VK_SUCCESS) {
         throw std::runtime_error("Failed to create descriptor set layout!");
     }
 }
 
-void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool) {
+void Pipeline::createDescriptorPool(
+    const uint32_t maxFramesInFlight, VkDevice device,
+    std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool) {
     this->setupPool = setupPool;
 
     std::vector<VkDescriptorPoolSize> poolSizes;
@@ -33,7 +38,10 @@ void Pipeline::createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice d
     }
 }
 
-void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor) {
+void Pipeline::createDescriptorSets(
+    const uint32_t maxFramesInFlight, VkDevice device,
+    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)>
+        setupDescriptor) {
     this->setupDescriptor = setupDescriptor;
 
     std::vector<VkDescriptorSetLayout> layouts(maxFramesInFlight, descriptorSetLayout);
@@ -55,7 +63,8 @@ void Pipeline::createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice d
 }
 
 void Pipeline::bind(VkCommandBuffer commandBuffer, int32_t currentFrame) {
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
+                            &descriptorSets[currentFrame], 0, nullptr);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 }
 
@@ -80,7 +89,7 @@ std::vector<char> Pipeline::readFile(const std::string& filename) {
         throw std::runtime_error("Failed to open file!");
     }
 
-    size_t fileSize = (size_t) file.tellg();
+    size_t fileSize = (size_t)file.tellg();
     std::vector<char> buffer(fileSize);
 
     file.seekg(0);

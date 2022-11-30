@@ -1,19 +1,21 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
-#include <iostream>
-#include <vector>
 #include <fstream>
 #include <functional>
+#include <iostream>
+#include <vector>
 
-#include "swapchain.hpp"
 #include "renderPass.hpp"
+#include "swapchain.hpp"
 
 class Pipeline {
-public:
-    template <typename V, typename I> void create(const std::string& vertShader, const std::string& fragShader, VkDevice device, RenderPass& renderPass) {
+  public:
+    template <typename V, typename I>
+    void create(const std::string& vertShader, const std::string& fragShader, VkDevice device,
+                RenderPass& renderPass) {
         this->fragShader = fragShader;
         this->vertShader = vertShader;
 
@@ -40,11 +42,13 @@ public:
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = { V::getBindingDescription(), I::getBindingDescription() };
+        std::array<VkVertexInputBindingDescription, 2> bindingDescriptions = {
+            V::getBindingDescription(), I::getBindingDescription()};
         auto vertexAttributeDescriptions = V::getAttributeDescriptions();
         auto instanceAttributeDescriptions = I::getAttributeDescriptions();
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-        attributeDescriptions.reserve(vertexAttributeDescriptions.size() + instanceAttributeDescriptions.size());
+        attributeDescriptions.reserve(vertexAttributeDescriptions.size() +
+                                      instanceAttributeDescriptions.size());
 
         for (VkVertexInputAttributeDescription desc : vertexAttributeDescriptions) {
             attributeDescriptions.push_back(desc);
@@ -55,7 +59,8 @@ public:
         }
 
         vertexInputInfo.vertexBindingDescriptionCount = 2;
-        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.vertexAttributeDescriptionCount =
+            static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -100,7 +105,8 @@ public:
         depthStencil.stencilTestEnable = VK_FALSE;
 
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                              VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable = VK_FALSE;
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -114,10 +120,8 @@ public:
         colorBlending.blendConstants[2] = 0.0f;
         colorBlending.blendConstants[3] = 0.0f;
 
-        std::vector<VkDynamicState> dynamicStates = {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_SCISSOR
-        };
+        std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                     VK_DYNAMIC_STATE_SCISSOR};
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -128,7 +132,8 @@ public:
         pipelineLayoutInfo.setLayoutCount = 1;
         pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-        if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
+            VK_SUCCESS) {
             throw std::runtime_error("Failed to create pipeline layout!");
         }
 
@@ -149,7 +154,8 @@ public:
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                      &graphicsPipeline) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create graphics pipeline!");
         }
 
@@ -157,7 +163,8 @@ public:
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
     }
 
-    template <typename V, typename I> void recreate(VkDevice device, const uint32_t maxFramesInFlight, RenderPass& renderPass) {
+    template <typename V, typename I>
+    void recreate(VkDevice device, const uint32_t maxFramesInFlight, RenderPass& renderPass) {
         cleanup(device);
         createDescriptorSetLayout(device, setupBindings);
         createDescriptorPool(maxFramesInFlight, device, setupPool);
@@ -165,14 +172,21 @@ public:
         create<V, I>(vertShader, fragShader, device, renderPass);
     }
 
-    void createDescriptorSetLayout(VkDevice device, std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings);
-    void createDescriptorPool(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool);
-    void createDescriptorSets(const uint32_t maxFramesInFlight, VkDevice device, std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor);
+    void createDescriptorSetLayout(
+        VkDevice device,
+        std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings);
+    void createDescriptorPool(
+        const uint32_t maxFramesInFlight, VkDevice device,
+        std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool);
+    void createDescriptorSets(
+        const uint32_t maxFramesInFlight, VkDevice device,
+        std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)>
+            setupDescriptor);
     void cleanup(VkDevice device);
 
     void bind(VkCommandBuffer commandBuffer, int32_t currentFrame);
 
-private:
+  private:
     static VkShaderModule createShaderModule(const std::vector<char>& code, VkDevice device);
     static std::vector<char> readFile(const std::string& filename);
 
@@ -185,7 +199,8 @@ private:
 
     std::function<void(std::vector<VkDescriptorSetLayoutBinding>&)> setupBindings;
     std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool;
-    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)> setupDescriptor;
+    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)>
+        setupDescriptor;
 
     std::string vertShader;
     std::string fragShader;
