@@ -46,8 +46,6 @@ void Commands::createPool(VkPhysicalDevice physicalDevice, VkDevice device, VkSu
     }
 }
 
-// TODO: Allow the user to specify a number of secondary command buffers to create per buffer.
-// This class should also provide methods to easily begin and end secondary cmd bufs.
 void Commands::createBuffers(VkDevice device, size_t maxFramesInFlight) {
     buffers.resize(maxFramesInFlight);
 
@@ -64,6 +62,21 @@ void Commands::createBuffers(VkDevice device, size_t maxFramesInFlight) {
 
 void Commands::resetBuffer(const uint32_t imageIndex, const uint32_t currentFrame) {
     vkResetCommandBuffer(buffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+}
+
+void Commands::beginBuffer(const uint32_t currentFrame) {
+    VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(buffers[currentFrame], &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to begin recording command buffer!");
+        }
+}
+
+void Commands::endBuffer(const uint32_t currentFrame) {
+    if (vkEndCommandBuffer(buffers[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to record command buffer!");
+        }
 }
 
 const VkCommandBuffer& Commands::getBuffer(const uint32_t currentFrame) {

@@ -18,8 +18,8 @@ public:
     void create(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain, bool enableDepth, bool enableMsaa);
     void recreate(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, Swapchain& swapchain);
 
-    void begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer, VkExtent2D extent, float clearColorR, float clearColorG, float clearColorB, float clearColorA, bool singleTime = false);
-    void end(VkCommandBuffer commandBuffer, bool singleTime = false);
+    void begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues);
+    void end(VkCommandBuffer commandBuffer);
 
     VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);

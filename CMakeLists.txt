@@ -76,5 +76,5 @@ target_link_libraries(UpdateExample ${LIB_NAME})
 add_executable(CubesExample src/examples/cubes.cpp)
 target_link_libraries(CubesExample ${LIB_NAME})
 
-add_executable(SsaoExample src/examples/ssao.cpp)
-target_link_libraries(SsaoExample ${LIB_NAME})
+add_executable(RenderTextureExample src/examples/renderTexture.cpp)
+target_link_libraries(RenderTextureExample ${LIB_NAME})

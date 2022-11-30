@@ -15,6 +15,8 @@ public:
 
     void createBuffers(VkDevice device, size_t maxFramesInFlight);
     void resetBuffer(const uint32_t imageIndex, const uint32_t currentFrame);
+    void beginBuffer(const uint32_t currentFrame);
+    void endBuffer(const uint32_t currentFrame);
     const VkCommandBuffer& getBuffer(const uint32_t currentFrame);
 
     void destroy(VkDevice device);

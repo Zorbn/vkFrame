@@ -210,6 +210,7 @@ private:
 
     std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
+    std::vector<VkClearValue> clearValues;
 
 public:
     int32_t getVoxel(size_t x, size_t y, size_t z) {
@@ -250,11 +251,11 @@ public:
         }
     }
 
-    void init(VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
+    void init(VulkanState& vulkanState, int32_t width, int32_t height) {
         vulkanState.swapchain.create(vulkanState.device, vulkanState.physicalDevice, vulkanState.surface, width, height);
 
         vulkanState.commands.createPool(vulkanState.physicalDevice, vulkanState.device, vulkanState.surface);
-        vulkanState.commands.createBuffers(vulkanState.device, maxFramesInFlight);
+        vulkanState.commands.createBuffers(vulkanState.device, vulkanState.maxFramesInFlight);
 
         textureImage = Image::createTextureArray("res/cubesImg.png", vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device, true, 16, 16, 4);
         textureImageView = textureImage.createTextureView(vulkanState.device);
@@ -266,7 +267,7 @@ public:
         voxelModel.updateInstances(instances, vulkanState.commands, vulkanState.allocator, vulkanState.graphicsQueue, vulkanState.device);
 
         const VkExtent2D& extent = vulkanState.swapchain.getExtent();
-        ubo.create(maxFramesInFlight, vulkanState.allocator);
+        ubo.create(vulkanState.maxFramesInFlight, vulkanState.allocator);
 
         renderPass.create(vulkanState.physicalDevice, vulkanState.device, vulkanState.allocator, vulkanState.swapchain, true, false);
 
@@ -288,14 +289,14 @@ public:
             bindings.push_back(uboLayoutBinding);
             bindings.push_back(samplerLayoutBinding);
         });
-        pipeline.createDescriptorPool(maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
+        pipeline.createDescriptorPool(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
             poolSizes.resize(2);
             poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
             poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
+            poolSizes[1].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
         });
-        pipeline.createDescriptorSets(maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
+        pipeline.createDescriptorSets(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);
             bufferInfo.offset = 0;
@@ -327,6 +328,10 @@ public:
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
         pipeline.create<VertexData, InstanceData>("res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass);
+
+        clearValues.resize(2);
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].depthStencil = {1.0f, 0};
     }
 
     void update(VulkanState& vulkanState) {
@@ -334,9 +339,6 @@ public:
 
     void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
         const VkExtent2D& extent = vulkanState.swapchain.getExtent();
-
-        renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 1.0f);
-        pipeline.bind(commandBuffer, currentFrame);
 
         UniformBufferData uboData{};
         uboData.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -346,9 +348,16 @@ public:
 
         ubo.update(uboData);
 
+        vulkanState.commands.beginBuffer(currentFrame);
+
+        renderPass.begin(imageIndex, commandBuffer, extent, clearValues);
+        pipeline.bind(commandBuffer, currentFrame);
+
         voxelModel.draw(commandBuffer);
 
         renderPass.end(commandBuffer);
+
+        vulkanState.commands.endBuffer(currentFrame);
     }
 
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {
@@ -371,8 +380,8 @@ public:
     int run() {
         Renderer renderer;
 
-        std::function<void(VulkanState&, int32_t, int32_t, uint32_t)> initCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height, uint32_t maxFramesInFlight) {
-            this->init(vulkanState, width, height, maxFramesInFlight);
+        std::function<void(VulkanState&, int32_t, int32_t)> initCallback = [&](VulkanState& vulkanState, int32_t width, int32_t height) {
+            this->init(vulkanState, width, height);
         };
 
         std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {
@@ -393,7 +402,7 @@ public:
         };
 
         try {
-            renderer.run("Cubes", 640, 480, initCallback, updateCallback, renderCallback, resizeCallback, cleanupCallback);
+            renderer.run("Cubes", 640, 480, 2, initCallback, updateCallback, renderCallback, resizeCallback, cleanupCallback);
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
             return EXIT_FAILURE;

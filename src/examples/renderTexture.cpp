@@ -1,8 +1,8 @@
 #include "../renderer/renderer.hpp"
 
 /*
- * Ssao:
- * Uses multiple passes to simulate ambient occlusion.
+ * RenderTexture:
+ * Uses multiple passes to draw to a model onto itself.
  */
 
 struct VertexData {
@@ -220,6 +220,7 @@ private:
 
     std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
+    std::vector<VkClearValue> clearValues;
 
 public:
     int32_t getVoxel(size_t x, size_t y, size_t z) {
@@ -309,23 +310,9 @@ public:
             colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            // VkAttachmentDescription colorAttachmentResolve{};
-            // colorAttachmentResolve.format = vulkanState.swapchain.getImageFormat();
-            // colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-            // colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            // colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            // colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            // colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            // colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            // colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
             VkAttachmentReference colorAttachmentRef{};
             colorAttachmentRef.attachment = 0;
             colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            // VkAttachmentReference colorAttachmentResolveRef{};
-            // colorAttachmentResolveRef.attachment = 1;
-            // colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
             VkSubpassDescription subpass{};
             subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -333,22 +320,6 @@ public:
             subpass.pColorAttachments = &colorAttachmentRef;
 
             std::array<VkSubpassDependency, 2> dependencies;
-
-            // dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-            // dependencies[0].dstSubpass = 0;
-            // dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            // dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            // dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            // dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            // dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-            // dependencies[1].srcSubpass = 0;
-            // dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-            // dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            // dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            // dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            // dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            // dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
             dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
             dependencies[0].dstSubpass = 0;
@@ -385,17 +356,13 @@ public:
 
             return renderPass;
         }, [&](const VkExtent2D& extent) {
-            // const VkFormat& imageFormat = vulkanState.swapchain.getImageFormat();
-
             colorImage = Image(vulkanState.allocator, extent.width, extent.height, VK_FORMAT_R32G32B32A32_SFLOAT,
                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
             colorImageView = colorImage.createView(VK_IMAGE_ASPECT_COLOR_BIT, vulkanState.device);
         }, [=] {
             vkDestroyImageView(vulkanState.device, colorImageView, nullptr);
             colorImage.destroy(vulkanState.allocator);
         }, [&](std::vector<VkImageView> &attachments, VkImageView imageView) {
-            // This should be  called by recreation.
             attachments.push_back(colorImageView);
         });
 
@@ -480,7 +447,7 @@ public:
 
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        finalPipeline.create<VertexData, InstanceData>("res/ssaoShader.vert.spv", "res/ssaoShader.frag.spv", vulkanState.device, finalRenderPass);
+        finalPipeline.create<VertexData, InstanceData>("res/renderTextureFinalShader.vert.spv", "res/renderTextureFinalShader.frag.spv", vulkanState.device, finalRenderPass);
 
         pipeline.createDescriptorSetLayout(vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
             VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -490,48 +457,18 @@ public:
             uboLayoutBinding.pImmutableSamplers = nullptr;
             uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-            // VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-            // samplerLayoutBinding.binding = 0;
-            // samplerLayoutBinding.descriptorCount = 1;
-            // samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // samplerLayoutBinding.pImmutableSamplers = nullptr;
-            // samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-            // VkDescriptorSetLayoutBinding depthSamplerLayoutBinding{};
-            // depthSamplerLayoutBinding.binding = 2;
-            // depthSamplerLayoutBinding.descriptorCount = 1;
-            // depthSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // depthSamplerLayoutBinding.pImmutableSamplers = nullptr;
-            // depthSamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
             bindings.push_back(uboLayoutBinding);
-            // bindings.push_back(samplerLayoutBinding);
-            // bindings.push_back(depthSamplerLayoutBinding);
         });
         pipeline.createDescriptorPool(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkDescriptorPoolSize> poolSizes) {
             poolSizes.resize(1);
             poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             poolSizes[0].descriptorCount = static_cast<uint32_t>(vulkanState.maxFramesInFlight);
-            // poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // poolSizes[1].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
-            // poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // poolSizes[0].descriptorCount = static_cast<uint32_t>(maxFramesInFlight);
         });
         pipeline.createDescriptorSets(vulkanState.maxFramesInFlight, vulkanState.device, [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet, size_t i) {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = ubo.getBuffer(i);
             bufferInfo.offset = 0;
             bufferInfo.range = ubo.getDataSize();
-
-            // VkDescriptorImageInfo imageInfo{};
-            // imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            // imageInfo.imageView = textureImageView;
-            // imageInfo.sampler = textureSampler;
-
-            // VkDescriptorImageInfo depthImageInfo{};
-            // depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            // depthImageInfo.imageView = colorImageView;
-            // depthImageInfo.sampler = colorSampler;
 
             descriptorWrites.resize(1);
 
@@ -543,30 +480,17 @@ public:
             descriptorWrites[0].descriptorCount = 1;
             descriptorWrites[0].pBufferInfo = &bufferInfo;
 
-            // descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrites[1].dstSet = descriptorSet;
-            // descriptorWrites[1].dstBinding = 1;
-            // descriptorWrites[1].dstArrayElement = 0;
-            // descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // descriptorWrites[1].descriptorCount = 1;
-            // descriptorWrites[1].pImageInfo = &imageInfo;
-
-            // descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            // descriptorWrites[0].dstSet = descriptorSet;
-            // descriptorWrites[0].dstBinding = 0;
-            // descriptorWrites[0].dstArrayElement = 0;
-            // descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            // descriptorWrites[0].descriptorCount = 1;
-            // descriptorWrites[0].pImageInfo = &depthImageInfo;
-
             vkUpdateDescriptorSets(vulkanState.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         });
-        pipeline.create<VertexData, InstanceData>("res/ssaoDepthShader.vert.spv", "res/ssaoDepthShader.frag.spv", vulkanState.device, renderPass);
+        pipeline.create<VertexData, InstanceData>("res/renderTextureShader.vert.spv", "res/renderTextureShader.frag.spv", vulkanState.device, renderPass);
+
+        clearValues.resize(2);
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].depthStencil = {1.0f, 0};
     }
 
     void update(VulkanState& vulkanState) {
-        // FIXME: Command buffers need be stopped and then restarted for this?
-        // finalPipeline.recreateDescriptorSets(2, vulkanState.device);
+
     }
 
     void render(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame) {
@@ -578,38 +502,27 @@ public:
         uboData.proj = glm::perspective(glm::radians(45.0f), extent.width / (float) extent.height, 0.1f, 20.0f);
         uboData.proj[1][1] *= -1;
 
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to begin recording command buffer!");
-        }
-
         ubo.update(uboData);
 
-        // VkCommandBuffer singleCmd = vulkanState.commands.beginSingleTime(vulkanState.graphicsQueue, vulkanState.device);
-        renderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 0.0f, 0.0f, false);
+        vulkanState.commands.beginBuffer(currentFrame);
+
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        renderPass.begin(imageIndex, commandBuffer, extent, clearValues);
         pipeline.bind(commandBuffer, currentFrame);
 
         voxelModel.draw(commandBuffer);
 
-        renderPass.end(commandBuffer, false);
-        // vulkanState.commands.endSingleTime(singleCmd, vulkanState.graphicsQueue, vulkanState.device);
+        renderPass.end(commandBuffer);
 
-        // colorImage.transitionImageLayout(vulkanState.commands, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vulkanState.graphicsQueue, vulkanState.device);
-
-        // finalPipeline.recreateDescriptorSets(2, vulkanState.device);
-
-        finalRenderPass.begin(imageIndex, commandBuffer, extent, 0.0f, 0.0f, 1.0f, 1.0f);
+        clearValues[0].color = {{0.0f, 0.0f, 1.0f, 1.0f}};
+        finalRenderPass.begin(imageIndex, commandBuffer, extent, clearValues);
         finalPipeline.bind(commandBuffer, currentFrame);
 
         voxelModel.draw(commandBuffer);
 
         finalRenderPass.end(commandBuffer);
 
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to record command buffer!");
-        }
+        vulkanState.commands.endBuffer(currentFrame);
     }
 
     void resize(VulkanState& vulkanState, int32_t width, int32_t height) {

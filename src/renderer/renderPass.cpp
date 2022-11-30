@@ -159,18 +159,13 @@ void RenderPass::createImages(VkDevice device, Swapchain& swapchain) {
     }
 }
 
-void RenderPass::begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer, VkExtent2D extent, float clearColorR, float clearColorG, float clearColorB, float clearColorA, /* TODO */bool singleTime) {
+void RenderPass::begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues) {
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = renderPass;
     renderPassInfo.framebuffer = framebuffers[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = extent;
-
-    // TODO: Make these customizable for createCustom()
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{clearColorR, clearColorG, clearColorB, clearColorA}};
-    clearValues[1].depthStencil = {1.0f, 0};
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
@@ -192,7 +187,7 @@ void RenderPass::begin(const uint32_t imageIndex, VkCommandBuffer commandBuffer,
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
-void RenderPass::end(VkCommandBuffer commandBuffer, /* TODO */bool singleTime) {
+void RenderPass::end(VkCommandBuffer commandBuffer) {
     vkCmdEndRenderPass(commandBuffer);
 }
 
