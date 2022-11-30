@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <stb_image.h>
+#include "../../deps/stb_image.h"
 
 #include <vk_mem_alloc.h>
 

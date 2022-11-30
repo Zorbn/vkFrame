@@ -3,7 +3,7 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
-#include <stb_image.h>
+#include "../../deps/stb_image.h"
 
 #include "buffer.hpp"
 

@@ -29,27 +29,27 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw glm vk_mem_alloc)
 
 add_library(
-        ${LIB_NAME}
-        src/renderer/renderer.cpp src/renderer/renderer.hpp
-        src/renderer/buffer.cpp src/renderer/buffer.hpp
-        src/renderer/commands.cpp src/renderer/commands.hpp
-        src/renderer/swapchain.cpp src/renderer/swapchain.hpp
-        src/renderer/image.cpp src/renderer/image.hpp
-        src/renderer/pipeline.cpp src/renderer/pipeline.hpp
-        src/renderer/renderPass.cpp src/renderer/renderPass.hpp
-        src/renderer/uniformBuffer.hpp
-        src/renderer/model.hpp
-        src/renderer/queueFamilyIndices.hpp
-        src/renderer/headerImpls.cpp
+        ${LIB_NAME} STATIC
+        src/vkFrame/renderer.cpp src/vkFrame/renderer.hpp
+        src/vkFrame/buffer.cpp src/vkFrame/buffer.hpp
+        src/vkFrame/commands.cpp src/vkFrame/commands.hpp
+        src/vkFrame/swapchain.cpp src/vkFrame/swapchain.hpp
+        src/vkFrame/image.cpp src/vkFrame/image.hpp
+        src/vkFrame/pipeline.cpp src/vkFrame/pipeline.hpp
+        src/vkFrame/renderPass.cpp src/vkFrame/renderPass.hpp
+        src/vkFrame/uniformBuffer.hpp
+        src/vkFrame/model.hpp
+        src/vkFrame/queueFamilyIndices.hpp
+        src/vkFrame/headerImpls.cpp
 )
+
+target_include_directories(${LIB_NAME} INTERFACE src/vkFrame/..)
 
 check_c_compiler_flag(-Wnullability-completeness HAVE_NULL_COMPLETENESS)
 
 if (HAVE_NULL_COMPLETENESS)
         target_compile_options(${LIB_NAME} PRIVATE -Wno-nullability-completeness)
 endif (HAVE_NULL_COMPLETENESS)
-
-target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps)
 
 target_link_libraries(
         ${LIB_NAME}
@@ -59,16 +59,9 @@ target_link_libraries(
         VulkanMemoryAllocator
 )
 
-add_custom_command(
-        TARGET ${LIB_NAME}
-        POST_BUILD
-        COMMAND
-        ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
-)
-
 # Examples
+
+set(ExampleNames UpdateExample CubesExample RenderTextureExample)
 
 add_executable(UpdateExample src/examples/update.cpp)
 target_link_libraries(UpdateExample ${LIB_NAME})
@@ -78,3 +71,14 @@ target_link_libraries(CubesExample ${LIB_NAME})
 
 add_executable(RenderTextureExample src/examples/renderTexture.cpp)
 target_link_libraries(RenderTextureExample ${LIB_NAME})
+
+foreach(EXAMPLE IN LISTS ExampleNames)
+        add_custom_command(
+                TARGET ${EXAMPLE}
+                POST_BUILD
+                COMMAND
+                ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res
+                DEPENDS ${CMAKE_CURRENT_BINARY_DIR}
+        )
+endforeach()
