@@ -57,7 +57,7 @@ class Renderer {
     void
     run(const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
         const uint32_t maxFramesInFlight,
-        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback,
+        std::function<void(VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height)> initCallback,
         std::function<void(VulkanState& vulkanState)> updateCallback,
         std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer,
                            uint32_t imageIndex, uint32_t currentFrame)>
@@ -88,7 +88,7 @@ class Renderer {
 
     void initVulkan(
         const uint32_t maxFramesInFlight,
-        std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback);
+        std::function<void(VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height)> initCallback);
     void createInstance();
     void createAllocator();
     void createLogicalDevice();

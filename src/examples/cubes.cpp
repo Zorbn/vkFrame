@@ -242,7 +242,7 @@ class App {
                 }
     }
 
-    void init(VulkanState& vulkanState, int32_t width, int32_t height) {
+    void init(VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height) {
         vulkanState.swapchain.create(vulkanState.device, vulkanState.physicalDevice,
                                      vulkanState.surface, width, height);
 
@@ -393,9 +393,9 @@ class App {
     int run() {
         Renderer renderer;
 
-        std::function<void(VulkanState&, int32_t, int32_t)> initCallback =
-            [&](VulkanState& vulkanState, int32_t width, int32_t height) {
-                this->init(vulkanState, width, height);
+        std::function<void(VulkanState&, GLFWwindow*, int32_t, int32_t)> initCallback =
+            [&](VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height) {
+                this->init(vulkanState, window, width, height);
             };
 
         std::function<void(VulkanState&)> updateCallback = [&](VulkanState vulkanState) {

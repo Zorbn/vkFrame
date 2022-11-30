@@ -35,7 +35,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 void Renderer::run(
     const std::string& windowTitle, const uint32_t windowWidth, const uint32_t windowHeight,
     const uint32_t maxFramesInFlight,
-    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback,
+    std::function<void(VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height)> initCallback,
     std::function<void(VulkanState& vulkanState)> updateCallback,
     std::function<void(VulkanState& vulkanState, VkCommandBuffer commandBuffer, uint32_t imageIndex,
                        uint32_t currentFrame)>
@@ -67,7 +67,7 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, int width, int heig
 
 void Renderer::initVulkan(
     const uint32_t maxFramesInFlight,
-    std::function<void(VulkanState& vulkanState, int32_t width, int32_t height)> initCallback) {
+    std::function<void(VulkanState& vulkanState, GLFWwindow* window, int32_t width, int32_t height)> initCallback) {
 
     createInstance();
     setupDebugMessenger();
@@ -82,7 +82,7 @@ void Renderer::initVulkan(
 
     vulkanState.maxFramesInFlight = maxFramesInFlight;
 
-    initCallback(vulkanState, width, height);
+    initCallback(vulkanState, window, width, height);
 
     createSyncObjects();
 }
