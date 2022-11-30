@@ -328,7 +328,7 @@ void Image::copyFromBuffer(Buffer& src, Commands& commands, VkQueue graphicsQueu
     }
 
     vkCmdCopyBufferToImage(commandBuffer, src.getBuffer(), image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(regions.size()), regions.data());
 
     commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }

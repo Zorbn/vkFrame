@@ -40,7 +40,7 @@ void Pipeline::createDescriptorPool(
 
 void Pipeline::createDescriptorSets(
     const uint32_t maxFramesInFlight, VkDevice device,
-    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)>
+    std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, uint32_t)>
         setupDescriptor) {
     this->setupDescriptor = setupDescriptor;
 

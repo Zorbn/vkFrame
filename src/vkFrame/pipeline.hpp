@@ -180,7 +180,7 @@ class Pipeline {
         std::function<void(std::vector<VkDescriptorPoolSize>& poolSizes)> setupPool);
     void createDescriptorSets(
         const uint32_t maxFramesInFlight, VkDevice device,
-        std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, size_t)>
+        std::function<void(std::vector<VkWriteDescriptorSet>&, VkDescriptorSet, uint32_t)>
             setupDescriptor);
     void cleanup(VkDevice device);
 

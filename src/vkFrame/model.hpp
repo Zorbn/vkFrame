@@ -35,7 +35,7 @@ template <typename V, typename I> class Model {
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getBuffer(), offsets);
         vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer.getBuffer(), offsets);
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT16);
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(size), instanceCount, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(size), static_cast<uint32_t>(instanceCount), 0, 0, 0);
     }
 
     void update(const std::vector<V>& vertices, const std::vector<uint16_t>& indices,

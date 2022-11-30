@@ -170,7 +170,7 @@ class App {
         pipeline.createDescriptorSets(
             vulkanState.maxFramesInFlight, vulkanState.device,
             [&](std::vector<VkWriteDescriptorSet>& descriptorWrites, VkDescriptorSet descriptorSet,
-                size_t i) {
+                uint32_t i) {
                 VkDescriptorBufferInfo bufferInfo{};
                 bufferInfo.buffer = ubo.getBuffer(i);
                 bufferInfo.offset = 0;
