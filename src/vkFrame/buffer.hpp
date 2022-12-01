@@ -4,30 +4,41 @@
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
+#include <stdexcept>
 
 #include "commands.hpp"
 #include "queueFamilyIndices.hpp"
 
 class Buffer {
   public:
+    template <typename T>
     static Buffer fromIndices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue,
-                              VkDevice device, const std::vector<uint16_t>& indices);
-    static Buffer fromIndicesWithMax(VmaAllocator allocator, Commands& commands,
-                                     VkQueue graphicsQueue, VkDevice device,
-                                     const std::vector<uint16_t>& indices, const size_t maxIndices);
+                              VkDevice device, const std::vector<T>& indices) {
+        size_t indexSize = sizeof(indices[0]);
+
+        // Only accept 16 or 32 bit types.
+        if (indexSize != 2 && indexSize != 4) {
+            throw std::runtime_error("Incorrect size when creating index buffer, indices should be 16 or 32 bit!");
+        }
+
+        VkDeviceSize bufferByteSize = indexSize * indices.size();
+
+        Buffer stagingBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
+        stagingBuffer.setData(indices.data());
+
+        Buffer indexBuffer(allocator, bufferByteSize,
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, false);
+
+        stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, indexBuffer);
+        stagingBuffer.destroy(allocator);
+
+        return indexBuffer;
+    }
 
     template <typename T>
     static Buffer fromVertices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue,
                                VkDevice device, const std::vector<T>& vertices) {
-        return Buffer::fromVerticesWithMax(allocator, commands, graphicsQueue, device, vertices,
-                                           vertices.size());
-    }
-
-    template <typename T>
-    static Buffer fromVerticesWithMax(VmaAllocator allocator, Commands& commands,
-                                      VkQueue graphicsQueue, VkDevice device,
-                                      const std::vector<T>& vertices, const size_t maxVertices) {
-        VkDeviceSize bufferByteSize = sizeof(vertices[0]) * maxVertices;
+        VkDeviceSize bufferByteSize = sizeof(vertices[0]) * vertices.size();
 
         Buffer stagingBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
         stagingBuffer.setData(vertices.data());

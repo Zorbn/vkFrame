@@ -204,7 +204,7 @@ class App {
     VkSampler colorSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<VertexData, InstanceData> voxelModel;
+    Model<VertexData, uint16_t, InstanceData> voxelModel;
 
     std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
@@ -289,7 +289,7 @@ class App {
         }
 
         generateVoxelMesh();
-        voxelModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(
+        voxelModel = Model<VertexData, uint16_t, InstanceData>::fromVerticesAndIndices(
             voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands,
             vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{}};

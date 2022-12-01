@@ -2,10 +2,10 @@
 
 #include <cinttypes>
 
-template <typename V, typename I> class Model {
+template <typename V, typename I, typename D> class Model {
   public:
-    static Model<V, I> fromVerticesAndIndices(const std::vector<V>& vertices,
-                                              const std::vector<uint16_t> indices,
+    static Model<V, I, D> fromVerticesAndIndices(const std::vector<V>& vertices,
+                                              const std::vector<I> indices,
                                               const size_t maxInstances, VmaAllocator allocator,
                                               Commands& commands, VkQueue graphicsQueue,
                                               VkDevice device) {
@@ -17,7 +17,7 @@ template <typename V, typename I> class Model {
         model.vertexBuffer =
             Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
 
-        size_t instanceByteSize = maxInstances * sizeof(I);
+        size_t instanceByteSize = maxInstances * sizeof(D);
         model.instanceStagingBuffer =
             Buffer(allocator, instanceByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
         model.instanceBuffer =
@@ -31,14 +31,19 @@ template <typename V, typename I> class Model {
         if (instanceCount < 1)
             return;
 
+        VkIndexType indexType = VK_INDEX_TYPE_UINT16;
+
+        if (sizeof(I) == 4)
+            indexType = VK_INDEX_TYPE_UINT32;
+
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getBuffer(), offsets);
         vkCmdBindVertexBuffers(commandBuffer, 1, 1, &instanceBuffer.getBuffer(), offsets);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getBuffer(), 0, indexType);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(size), static_cast<uint32_t>(instanceCount), 0, 0, 0);
     }
 
-    void update(const std::vector<V>& vertices, const std::vector<uint16_t>& indices,
+    void update(const std::vector<V>& vertices, const std::vector<I>& indices,
                 Commands& commands, VmaAllocator allocator, VkQueue graphicsQueue,
                 VkDevice device) {
         size = indices.size();
@@ -50,7 +55,7 @@ template <typename V, typename I> class Model {
         vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
     }
 
-    void updateInstances(const std::vector<I>& instances, Commands& commands,
+    void updateInstances(const std::vector<D>& instances, Commands& commands,
                          VmaAllocator allocator, VkQueue graphicsQueue, VkDevice device) {
         instanceCount = instances.size();
         instanceStagingBuffer.setData(instances.data());

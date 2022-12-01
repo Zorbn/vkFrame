@@ -194,7 +194,7 @@ class App {
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<VertexData, InstanceData> voxelModel;
+    Model<VertexData, uint16_t, InstanceData> voxelModel;
 
     std::vector<VertexData> voxelVertices;
     std::vector<uint16_t> voxelIndices;
@@ -219,7 +219,7 @@ class App {
                         continue;
 
                     for (size_t face = 0; face < 6; face++) {
-                        if (getVoxel(x + +directions[face][0], y + directions[face][1],
+                        if (getVoxel(x + directions[face][0], y + directions[face][1],
                                      z + directions[face][2]) != 0)
                             continue;
 
@@ -258,7 +258,7 @@ class App {
             vulkanState.physicalDevice, vulkanState.device, VK_FILTER_NEAREST, VK_FILTER_NEAREST);
 
         generateVoxelMesh();
-        voxelModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(
+        voxelModel = Model<VertexData, uint16_t, InstanceData>::fromVerticesAndIndices(
             voxelVertices, voxelIndices, 1, vulkanState.allocator, vulkanState.commands,
             vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{}};

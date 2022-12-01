@@ -36,29 +36,6 @@ void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice dev
     commands.endSingleTime(commandBuffer, graphicsQueue, device);
 }
 
-Buffer Buffer::fromIndices(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue,
-                           VkDevice device, const std::vector<uint16_t>& indices) {
-    return Buffer::fromIndicesWithMax(allocator, commands, graphicsQueue, device, indices,
-                                      indices.size());
-}
-
-Buffer Buffer::fromIndicesWithMax(VmaAllocator allocator, Commands& commands, VkQueue graphicsQueue,
-                                  VkDevice device, const std::vector<uint16_t>& indices,
-                                  const size_t maxIndices) {
-    VkDeviceSize bufferByteSize = sizeof(indices[0]) * maxIndices;
-
-    Buffer stagingBuffer(allocator, bufferByteSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true);
-    stagingBuffer.setData(indices.data());
-
-    Buffer indexBuffer(allocator, bufferByteSize,
-                       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, false);
-
-    stagingBuffer.copyTo(allocator, graphicsQueue, device, commands, indexBuffer);
-    stagingBuffer.destroy(allocator);
-
-    return indexBuffer;
-}
-
 const VkBuffer& Buffer::getBuffer() { return buffer; }
 
 void Buffer::map(VmaAllocator allocator, void** data) { vmaMapMemory(allocator, allocation, data); }

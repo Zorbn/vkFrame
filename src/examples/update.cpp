@@ -103,7 +103,7 @@ class App {
     VkSampler textureSampler;
 
     UniformBuffer<UniformBufferData> ubo;
-    Model<VertexData, InstanceData> updateTestModel;
+    Model<VertexData, uint16_t, InstanceData> updateTestModel;
 
     uint32_t frameCount = 0;
 
@@ -125,7 +125,7 @@ class App {
         textureSampler =
             textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<VertexData, InstanceData>::fromVerticesAndIndices(
+        updateTestModel = Model<VertexData, uint16_t, InstanceData>::fromVerticesAndIndices(
             testVertices2, testIndices2, 3, vulkanState.allocator, vulkanState.commands,
             vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{glm::vec3(1.0f, 0.0f, 0.0f)},
