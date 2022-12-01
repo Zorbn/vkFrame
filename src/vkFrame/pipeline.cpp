@@ -56,7 +56,7 @@ void Pipeline::createDescriptorSets(
         throw std::runtime_error("Failed to allocate descriptor sets!");
     }
 
-    for (size_t i = 0; i < maxFramesInFlight; i++) {
+    for (uint32_t i = 0; i < maxFramesInFlight; i++) {
         std::vector<VkWriteDescriptorSet> descriptorWrites;
         setupDescriptor(descriptorWrites, descriptorSets[i], i);
     }
