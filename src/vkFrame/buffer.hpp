@@ -61,6 +61,7 @@ class Buffer {
     void copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice device, Commands& commands,
                 Buffer& dst);
     const VkBuffer& getBuffer();
+    size_t getSize();
     void map(VmaAllocator allocator, void** data);
     void unmap(VmaAllocator allocator);
 
@@ -68,5 +69,5 @@ class Buffer {
     VkBuffer buffer;
     VmaAllocation allocation;
     VmaAllocationInfo allocInfo;
-    size_t byteSize;
+    size_t byteSize = 0;
 };

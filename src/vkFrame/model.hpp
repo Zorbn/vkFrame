@@ -9,13 +9,20 @@ template <typename V, typename I, typename D> class Model {
                                               const size_t maxInstances, VmaAllocator allocator,
                                               Commands& commands, VkQueue graphicsQueue,
                                               VkDevice device) {
-        Model model;
+        Model model = create(maxInstances, allocator, commands, graphicsQueue, device);
         model.size = indices.size();
 
         model.indexBuffer =
             Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
         model.vertexBuffer =
             Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
+
+        return model;
+    }
+
+    static Model<V, I, D> create(const size_t maxInstances, VmaAllocator allocator, Commands& commands,
+          VkQueue graphicsQueue, VkDevice device) {
+        Model model;
 
         size_t instanceByteSize = maxInstances * sizeof(D);
         model.instanceStagingBuffer =
@@ -25,9 +32,12 @@ template <typename V, typename I, typename D> class Model {
                    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, false);
 
         return model;
-    }
+    };
 
     void draw(VkCommandBuffer commandBuffer) {
+        if (vertexBuffer.getSize() == 0 || instanceBuffer.getSize() == 0 || indexBuffer.getSize() == 0)
+            return;
+
         if (instanceCount < 1)
             return;
 
@@ -49,8 +59,10 @@ template <typename V, typename I, typename D> class Model {
         size = indices.size();
 
         vkDeviceWaitIdle(device);
+
         indexBuffer.destroy(allocator);
         vertexBuffer.destroy(allocator);
+
         indexBuffer = Buffer::fromIndices(allocator, commands, graphicsQueue, device, indices);
         vertexBuffer = Buffer::fromVertices(allocator, commands, graphicsQueue, device, vertices);
     }
@@ -74,6 +86,6 @@ template <typename V, typename I, typename D> class Model {
     Buffer indexBuffer;
     Buffer instanceBuffer;
     Buffer instanceStagingBuffer;
-    size_t size;
+    size_t size = 0;
     size_t instanceCount = 0;
 };

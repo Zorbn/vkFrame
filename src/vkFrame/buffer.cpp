@@ -3,7 +3,7 @@
 Buffer::Buffer() {}
 
 Buffer::Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags usage,
-               bool cpuAccessable) {
+               bool cpuAccessable) : byteSize(byteSize) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = byteSize;
@@ -17,9 +17,7 @@ Buffer::Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags
                                 VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
 
-    this->byteSize = byteSize;
-
-    if (vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &buffer, &allocation,
+    if (byteSize != 0 && vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &buffer, &allocation,
                         &allocInfo) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create buffer!");
     }
@@ -27,6 +25,8 @@ Buffer::Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags
 
 void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice device,
                     Commands& commands, Buffer& dst) {
+    if (byteSize == 0 || dst.getSize() == 0) return;
+
     VkCommandBuffer commandBuffer = commands.beginSingleTime(graphicsQueue, device);
 
     VkBufferCopy copyRegion{};
@@ -38,10 +38,28 @@ void Buffer::copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice dev
 
 const VkBuffer& Buffer::getBuffer() { return buffer; }
 
-void Buffer::map(VmaAllocator allocator, void** data) { vmaMapMemory(allocator, allocation, data); }
+size_t Buffer::getSize() { return byteSize; }
 
-void Buffer::unmap(VmaAllocator allocator) { vmaUnmapMemory(allocator, allocation); }
+void Buffer::map(VmaAllocator allocator, void** data) {
+    if (byteSize == 0) return;
 
-void Buffer::destroy(VmaAllocator& allocator) { vmaDestroyBuffer(allocator, buffer, allocation); }
+    vmaMapMemory(allocator, allocation, data);
+}
 
-void Buffer::setData(const void* data) { memcpy(allocInfo.pMappedData, data, byteSize); }
+void Buffer::unmap(VmaAllocator allocator) {
+    if (byteSize == 0) return;
+
+    vmaUnmapMemory(allocator, allocation);
+}
+
+void Buffer::destroy(VmaAllocator& allocator) {
+    if (byteSize == 0) return;
+
+    vmaDestroyBuffer(allocator, buffer, allocation);
+}
+
+void Buffer::setData(const void* data) {
+    if (byteSize == 0) return;
+
+    memcpy(allocInfo.pMappedData, data, byteSize);
+}
