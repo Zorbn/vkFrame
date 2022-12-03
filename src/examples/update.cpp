@@ -125,7 +125,8 @@ class App {
         textureSampler =
             textureImage.createTextureSampler(vulkanState.physicalDevice, vulkanState.device);
 
-        updateTestModel = Model<VertexData, uint16_t, InstanceData>::create(3, vulkanState.allocator, vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
+        updateTestModel = Model<VertexData, uint16_t, InstanceData>::create(3, vulkanState.allocator,
+            vulkanState.commands, vulkanState.graphicsQueue, vulkanState.device);
         std::vector<InstanceData> instances = {InstanceData{glm::vec3(1.0f, 0.0f, 0.0f)},
                                                InstanceData{glm::vec3(0.0f, 1.0f, 0.0f)},
                                                InstanceData{glm::vec3(0.0f, 0.0f, 1.0f)}};
