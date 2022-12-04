@@ -470,7 +470,7 @@ class App {
             });
         finalPipeline.create<VertexData, InstanceData>("res/renderTextureFinalShader.vert.spv",
                                                        "res/renderTextureFinalShader.frag.spv",
-                                                       vulkanState.device, finalRenderPass);
+                                                       vulkanState.device, finalRenderPass, false);
 
         pipeline.createDescriptorSetLayout(
             vulkanState.device, [&](std::vector<VkDescriptorSetLayoutBinding>& bindings) {
@@ -515,7 +515,7 @@ class App {
             });
         pipeline.create<VertexData, InstanceData>("res/renderTextureShader.vert.spv",
                                                   "res/renderTextureShader.frag.spv",
-                                                  vulkanState.device, renderPass);
+                                                  vulkanState.device, renderPass, false);
 
         clearValues.resize(2);
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};

@@ -336,7 +336,7 @@ class App {
                                        descriptorWrites.data(), 0, nullptr);
             });
         pipeline.create<VertexData, InstanceData>(
-            "res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass);
+            "res/cubesShader.vert.spv", "res/cubesShader.frag.spv", vulkanState.device, renderPass, false);
 
         clearValues.resize(2);
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};

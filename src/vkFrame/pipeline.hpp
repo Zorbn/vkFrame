@@ -15,7 +15,7 @@ class Pipeline {
   public:
     template <typename V, typename I>
     void createCustom(const std::string& vertShader, const std::string& fragShader, VkDevice device,
-                RenderPass& renderPass, VkPipelineRasterizationStateCreateInfo rasterizer) {
+                RenderPass& renderPass, bool enableTransparency, VkPipelineRasterizationStateCreateInfo rasterizer) {
         this->fragShader = fragShader;
         this->vertShader = vertShader;
 
@@ -97,7 +97,18 @@ class Pipeline {
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                               VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+
+        if (enableTransparency) {
+            colorBlendAttachment.blendEnable = VK_TRUE;
+            colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+            colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+            colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        } else {
+            colorBlendAttachment.blendEnable = VK_FALSE;
+        }
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -155,7 +166,7 @@ class Pipeline {
 
     template <typename V, typename I>
     void create(const std::string& vertShader, const std::string& fragShader, VkDevice device,
-                RenderPass& renderPass) {
+                RenderPass& renderPass, bool enableTransparency) {
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable = VK_FALSE;
@@ -166,7 +177,7 @@ class Pipeline {
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
 
-        createCustom<V, I>(vertShader, fragShader, device, renderPass, rasterizer);
+        createCustom<V, I>(vertShader, fragShader, device, renderPass, enableTransparency, rasterizer);
     }
 
     template <typename V, typename I>

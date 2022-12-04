@@ -204,7 +204,7 @@ class App {
             });
         pipeline.create<VertexData, InstanceData>("res/updateShader.vert.spv",
                                                   "res/updateShader.frag.spv", vulkanState.device,
-                                                  renderPass);
+                                                  renderPass, false);
 
         clearValues.resize(2);
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
