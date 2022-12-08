@@ -3,7 +3,7 @@
 Buffer::Buffer() {}
 
 Buffer::Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags usage,
-               bool cpuAccessable) : byteSize(byteSize) {
+               bool cpuAccessible) : byteSize(byteSize) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = byteSize;
@@ -12,7 +12,7 @@ Buffer::Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags
 
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    if (cpuAccessable) {
+    if (cpuAccessible) {
         allocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
                                 VMA_ALLOCATION_CREATE_MAPPED_BIT;
     }
