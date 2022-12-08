@@ -10,10 +10,10 @@
 class Image {
   public:
     static Image createTexture(const std::string& image, VmaAllocator allocator, Commands& commands,
-                               VkQueue graphicsQueue, VkDevice device, bool enablemipMaps);
+                               VkQueue graphicsQueue, VkDevice device, bool enableMipmaps);
     static Image createTextureArray(const std::string& image, VmaAllocator allocator,
                                     Commands& commands, VkQueue graphicsQueue, VkDevice device,
-                                    bool enablemipMaps, uint32_t width, uint32_t height,
+                                    bool enableMipmaps, uint32_t width, uint32_t height,
                                     uint32_t layers);
 
     Image();

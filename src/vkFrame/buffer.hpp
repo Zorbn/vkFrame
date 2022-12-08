@@ -55,7 +55,7 @@ class Buffer {
 
     Buffer();
     Buffer(VmaAllocator allocator, VkDeviceSize byteSize, VkBufferUsageFlags usage,
-           bool cpuAccessable);
+           bool cpuAccessible);
     void destroy(VmaAllocator& allocator);
     void setData(const void* data);
     void copyTo(VmaAllocator& allocator, VkQueue graphicsQueue, VkDevice device, Commands& commands,
