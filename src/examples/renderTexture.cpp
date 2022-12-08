@@ -10,7 +10,7 @@ struct VertexData {
     glm::vec3 color;
     glm::vec3 texCoord;
 
-    static VkVertexInputBindingDescription VertexData::getBindingDescription() {
+    static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
         bindingDescription.stride = sizeof(VertexData);
@@ -19,7 +19,7 @@ struct VertexData {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> VertexData::getAttributeDescriptions() {
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
         std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
