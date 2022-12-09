@@ -52,6 +52,11 @@ class RenderPass {
 
     const VkSampleCountFlagBits getMaxUsableSamples(VkPhysicalDevice physicalDevice);
 
+    std::function<void()> cleanupCallback;
+    std::function<void(const VkExtent2D&)> recreateCallback;
+    std::function<void(std::vector<VkImageView>& attachments, VkImageView imageView)>
+        setupFramebuffer;
+
     VkRenderPass renderPass;
 
     std::vector<Image> images;
@@ -63,12 +68,7 @@ class RenderPass {
     Image colorImage;
     VkImageView colorImageView;
     VkFormat imageFormat;
-    bool depthEnabled;
-    bool msaaEnabled;
+    bool depthEnabled = false;
+    bool msaaEnabled = false;
     VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    std::function<void()> cleanupCallback;
-    std::function<void(const VkExtent2D&)> recreateCallback;
-    std::function<void(std::vector<VkImageView>& attachments, VkImageView imageView)>
-        setupFramebuffer;
 };

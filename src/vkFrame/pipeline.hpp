@@ -18,6 +18,7 @@ class Pipeline {
                 RenderPass& renderPass, bool enableTransparency, VkPipelineRasterizationStateCreateInfo rasterizer) {
         this->fragShader = fragShader;
         this->vertShader = vertShader;
+        this->transparencyEnabled = enableTransparency;
 
         auto vertShaderCode = readFile(vertShader);
         auto fragShaderCode = readFile(fragShader);
@@ -186,7 +187,7 @@ class Pipeline {
         createDescriptorSetLayout(device, setupBindings);
         createDescriptorPool(maxFramesInFlight, device, setupPool);
         createDescriptorSets(maxFramesInFlight, device, setupDescriptor);
-        create<V, I>(vertShader, fragShader, device, renderPass);
+        create<V, I>(vertShader, fragShader, device, renderPass, transparencyEnabled);
     }
 
     void createDescriptorSetLayout(
@@ -221,4 +222,6 @@ class Pipeline {
 
     std::string vertShader;
     std::string fragShader;
+
+    bool transparencyEnabled = false;
 };

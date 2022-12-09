@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
