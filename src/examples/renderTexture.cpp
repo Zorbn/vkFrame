@@ -195,10 +195,6 @@ class App {
     VkImageView textureImageView;
     VkSampler textureSampler;
 
-    Image depthTextureImage;
-    VkImageView depthTextureImageView;
-    VkSampler depthTextureSampler;
-
     Image colorImage;
     VkImageView colorImageView;
     VkSampler colorSampler;
